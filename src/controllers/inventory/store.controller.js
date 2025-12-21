@@ -228,9 +228,7 @@ export const loginStore = async (req, res) => {
 export const updateStore = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, location, contactNumber, email, permissions } = req.body;
-
-    // TODO: Handle password update separately if needed
+    const { name, location, contactNumber, email, permissions, manager, password } = req.body;
 
     const store = await Store.findByPk(id);
 
@@ -242,8 +240,15 @@ export const updateStore = async (req, res) => {
       });
     }
 
+    const updateData = { name, location, contactNumber, email, permissions, manager };
+
+    // Only update password if provided and not empty
+    if (password && password.trim() !== '') {
+      updateData.password = password;
+    }
+
     // Sequelize update
-    await store.update({ name, location, contactNumber, email, permissions });
+    await store.update(updateData);
 
     return sendResponse(res, {
       message: "Store updated successfully",
