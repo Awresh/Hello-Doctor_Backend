@@ -23,6 +23,7 @@ import { ClinicSlotConfig } from './clinic/clinic-slot-config.model.js';
 import { DoctorSlotConfig } from './clinic/doctor-slot-config.model.js';
 import { SlotOverride } from './clinic/slot-override.model.js';
 import { Admin } from './admin/admin.model.js';
+import { Role } from './tenant/role.model.js';
 
 // Define associations after all models are loaded
 function setupAssociations() {
@@ -144,6 +145,10 @@ function setupAssociations() {
   SlotOverride.belongsTo(TenantUser, { foreignKey: 'doctorId', as: 'doctor' });
   TenantUser.hasMany(SlotOverride, { foreignKey: 'doctorId', as: 'slotOverrides' });
 
+  // Role associations
+  Role.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(Role, { foreignKey: 'tenantId' });
+
 }
 
 export {
@@ -171,5 +176,6 @@ export {
   ClinicSlotConfig,
   DoctorSlotConfig,
   SlotOverride,
+  Role,
   setupAssociations
 };

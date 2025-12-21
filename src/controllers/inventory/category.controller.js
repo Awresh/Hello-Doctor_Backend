@@ -11,7 +11,6 @@ export const getAllCategories = async (req, res) => {
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const storeData = req.store;
-
     let whereClause = { tenantId, isActive: true };
     if (storeData) {
       whereClause = {

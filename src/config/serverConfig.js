@@ -79,6 +79,10 @@ export const API_ROUTES = {
   // Tenant Profile
   TENANT_PROFILE: '/tenant/profile',
 
+  // Roles
+  ROLES: '/roles',
+  ROLE_BY_ID: '/roles/:id',
+
   // Health Check
   HEALTH: '/health'
 }

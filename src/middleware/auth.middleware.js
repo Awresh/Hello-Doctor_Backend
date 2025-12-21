@@ -35,7 +35,7 @@ export const verifyToken = async (req, res, next) => {
 
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-
+            // console.log("decoded",decoded);
             if (decoded.storeId) {
                 const store = await Store.findByPk(decoded.storeId, {
                     include: [{
@@ -80,6 +80,7 @@ export const verifyToken = async (req, res, next) => {
 
                 req.user = user;
                 req.tenant = user.Tenant;
+                req.tenant.userId = user.id;
             } else if (decoded.adminId) {
                 const admin = await Admin.findByPk(decoded.adminId);
 
@@ -112,6 +113,7 @@ export const verifyToken = async (req, res, next) => {
                         message: 'Invalid token. Tenant not found.'
                     });
                 }
+
 
                 req.tenant = tenant;
             }

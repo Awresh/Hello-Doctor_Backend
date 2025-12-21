@@ -144,7 +144,7 @@ export const loginStore = async (req, res) => {
         return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Store account is inactive' });
       }
 
-      const token = jwt.sign({ storeId: store.id, tenantId: store.tenantId, role: 'store_admin' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+      const token = jwt.sign({ storeId: store.id,user: store.id, tenantId: store.tenantId, role: 'store_admin' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
 
       // Extract business type and tenant ID for frontend
       const businessType = getJsonValue(store, ['Tenant', 'BusinessType']);

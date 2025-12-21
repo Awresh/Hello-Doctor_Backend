@@ -11,6 +11,7 @@ import inventoryRouter from './routes/inventory.routes.js';
 import timeSlotRouter from './routes/timeslot.routes.js';
 import slotConfigRouter from './routes/slot-config.routes.js';
 import tenantUserRouter from './routes/tenant-user.route.js';
+import roleRouter from './routes/tenant/role.routes.js';
 import tenantRouter from './routes/tenant.route.js';
 import { verifyToken } from './middleware/auth.middleware.js';
 const app = express();
@@ -33,6 +34,7 @@ app.use(inventoryRouter)
 app.use(timeSlotRouter);
 app.use(slotConfigRouter);
 app.use(tenantUserRouter);
+app.use(roleRouter);
 app.use(tenantRouter);
 // app.use('/api', routes);
 app.use(errorMiddleware);
