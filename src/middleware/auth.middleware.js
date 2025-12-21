@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { Tenant, Store, BusinessType, Admin } from "../models/index.js";
+import { Tenant, Store, BusinessType, Admin, TenantUser } from "../models/index.js";
 import { STATUS_CODES } from "../config/statusCodes.js";
 import { sendResponse } from "../utils/response.util.js";
 
@@ -54,6 +54,32 @@ export const verifyToken = async (req, res, next) => {
 
                 req.store = store;
                 req.tenant = store.Tenant; // Maintain compatibility
+            } else if (decoded.userId) { // Handle TenantUser
+                const user = await TenantUser.findByPk(decoded.userId, {
+                    include: [{
+                        model: Tenant,
+                        include: [{ model: BusinessType, attributes: ['name'] }]
+                    }]
+                });
+
+                if (!user) {
+                    return sendResponse(res, {
+                        statusCode: STATUS_CODES.UNAUTHORIZED,
+                        success: false,
+                        message: 'Invalid token. User not found.'
+                    });
+                }
+
+                if (!user.Tenant || !user.Tenant.isActive) {
+                    return sendResponse(res, {
+                        statusCode: STATUS_CODES.UNAUTHORIZED,
+                        success: false,
+                        message: 'Business account is inactive.'
+                    });
+                }
+
+                req.user = user;
+                req.tenant = user.Tenant;
             } else if (decoded.adminId) {
                 const admin = await Admin.findByPk(decoded.adminId);
 

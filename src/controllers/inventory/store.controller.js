@@ -1,4 +1,5 @@
 import { Store } from "../../models/inventory/store.model.js";
+import { TenantUser } from "../../models/tenant/tenent.user.model.js";
 import { Tenant, BusinessType } from "../../models/index.js";
 import { MESSAGES } from "../../config/serverConfig.js";
 import { sendResponse } from "../../utils/response.util.js";
@@ -13,7 +14,7 @@ export const getAllStores = async (req, res) => {
     const tenant = req.tenant;
     const tenantId = tenant.id; // Sequelize uses id, not _id
     const stores = await Store.findAll({ where: { tenantId, isActive: true } });
-    
+
     const response = checkNullArr(stores) ? stores.map((store) => {
       const storeObj = store.toJSON();
       return {
@@ -24,7 +25,7 @@ export const getAllStores = async (req, res) => {
         showAction_Toggle: true,
       };
     }) : [];
-    
+
     return sendResponse(res, {
       message: "Stores fetched successfully",
       data: response,
@@ -71,13 +72,13 @@ export const createStore = async (req, res) => {
     const { name, location, contactNumber, email, password, permissions, manager } = req.body;
     const tenant = req.tenant;
     const tenantId = tenant.id;
-    
-    const existingStore = await Store.findOne({ 
-      where: { 
-        [Op.or]: [{ name }, { email }] 
-      } 
+
+    const existingStore = await Store.findOne({
+      where: {
+        [Op.or]: [{ name }, { email }]
+      }
     });
-    
+
     if (existingStore) {
       return sendResponse(res, {
         statusCode: STATUS_CODES.BAD_REQUEST,
@@ -112,58 +113,109 @@ export const createStore = async (req, res) => {
   }
 };
 
-// Login Store
+// Login Store (Unified Login: Store or TenantUser)
 export const loginStore = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, loginType } = req.body; // Added loginType
 
-    // Use scope 'withPassword' if defined in model, or explicitly include attribute
-    // Assuming defaultScope excludes password
-    const store = await Store.scope('withPassword').findOne({ 
-      where: { email },
-      include: [{
-        model: Tenant,
-        include: [{ 
-          model: BusinessType, 
-          attributes: ['name'] 
+    // --- CASE 1: STORE LOGIN ---
+    if (loginType === 'store') {
+      const store = await Store.scope('withPassword').findOne({
+        where: { email },
+        include: [{
+          model: Tenant,
+          include: [{
+            model: BusinessType,
+            attributes: ['name']
+          }]
         }]
-      }]
-    });
-
-    if (!store) {
-      return sendResponse(res, {
-        statusCode: STATUS_CODES.UNAUTHORIZED,
-        success: false,
-        message: 'Invalid credentials'
       });
-    }
 
-    const isPasswordValid = await store.comparePassword(password);
-    if (!isPasswordValid) {
-      return sendResponse(res, {
-        statusCode: STATUS_CODES.UNAUTHORIZED,
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    const token = jwt.sign({ storeId: store.id, tenantId: store.tenantId }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
-
-    // Extract business type and tenant ID for frontend
-    const businessType = getJsonValue(store, ['Tenant', 'BusinessType']);
-    const tenantId = getJsonValue(store, ['Tenant', 'id']);
-
-    return sendResponse(res, {
-      message: 'Login successful',
-      data: {
-        store,
-        token,
-        businessType,
-        tenantId
+      if (!store) {
+        return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Invalid store credentials' });
       }
-    });
+
+      const isPasswordValid = await store.comparePassword(password);
+      if (!isPasswordValid) {
+        return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Invalid store credentials' });
+      }
+
+      if (!store.isActive) {
+        return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Store account is inactive' });
+      }
+
+      const token = jwt.sign({ storeId: store.id, tenantId: store.tenantId, role: 'store_admin' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+
+      // Extract business type and tenant ID for frontend
+      const businessType = getJsonValue(store, ['Tenant', 'BusinessType']);
+      const tenantId = getJsonValue(store, ['Tenant', 'id']);
+
+      return sendResponse(res, {
+        message: 'Store login successful',
+        data: {
+          store: { ...store.toJSON(), role: 'store_admin' },
+          token,
+          businessType,
+          tenantId
+        }
+      });
+    }
+
+    // --- CASE 2: STAFF/TENANT USER LOGIN ---
+    else if (loginType === 'staff' || loginType === 'user') {
+      const tenantUser = await TenantUser.scope('withPassword').findOne({
+        where: { email },
+        include: [{
+          model: Tenant, // Check if Tenant exists/active
+          include: [{
+            model: BusinessType,
+            attributes: ['name']
+          }]
+        }]
+      });
+
+      if (!tenantUser) {
+        return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Invalid staff credentials' });
+      }
+
+      const isUserPasswordValid = await tenantUser.comparePassword(password);
+      if (!isUserPasswordValid) {
+        return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Invalid staff credentials' });
+      }
+
+      // Check if Tenant is active
+      if (!tenantUser.Tenant || !tenantUser.Tenant.isActive) {
+        return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Business account is inactive' });
+      }
+
+      // Generate token with userId
+      const token = jwt.sign({
+        userId: tenantUser.id,
+        tenantId: tenantUser.tenantId,
+        role: tenantUser.role
+      }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+
+      const businessType = getJsonValue(tenantUser, ['Tenant', 'BusinessType']);
+      const tenantId = getJsonValue(tenantUser, ['Tenant', 'id']);
+
+      return sendResponse(res, {
+        message: 'Staff login successful',
+        data: {
+          store: tenantUser, // Sending User object in place of store for compatibility
+          token,
+          businessType,
+          tenantId
+        }
+      });
+    }
+
+    // --- CASE 3: UNKNOWN/MISSING TYPE ---
+    else {
+      return sendResponse(res, { statusCode: STATUS_CODES.BAD_REQUEST, success: false, message: 'Login type is required (store or staff)' });
+    }
+
   } catch (error) {
-    console.error("Login Store Error:", error);
+    console.error("Login Error:", error);
     return sendResponse(res, {
       statusCode: STATUS_CODES.INTERNAL_SERVER_ERROR,
       success: false,

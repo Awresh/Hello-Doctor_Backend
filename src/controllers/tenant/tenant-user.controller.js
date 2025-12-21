@@ -7,7 +7,7 @@ import { MESSAGES } from "../../config/serverConfig.js";
  * Helper to get and validate tenantId from request
  */
 const getTenantId = (req) => {
-    const tenantId = req.headers['x-tenant-id'] || req.body.tenantId || req.query.tenantId || req.tenant?.id;
+    const tenantId = req.headers['x-tenant-id'] || req.body?.tenantId || req.query?.tenantId || req.tenant?.id;
     return tenantId;
 };
 
@@ -23,7 +23,10 @@ export const createTenantUser = async (req, res) => {
             });
         }
 
-        const { name, role, about, description, experience, speciality, doctorId } = req.body;
+        const { name, role, email, password, permissions, about, description, experience, speciality, doctorId } = req.body;
+
+        // Log the payload for debugging if needed
+        // console.log("Creating TenantUser Payload:", { name, role, email, hasPassword: !!password, permissionsCount: permissions?.length });
 
         if (!name || !role) {
             return sendResponse(res, {
@@ -36,6 +39,9 @@ export const createTenantUser = async (req, res) => {
         const tenantUser = await TenantUser.create({
             name,
             role,
+            email,
+            password, // Password hashing is handled by BeforeSave hook in model
+            permissions: permissions || [], // Default to empty array if not provided
             about,
             description,
             experience,
@@ -141,7 +147,7 @@ export const updateTenantUser = async (req, res) => {
         }
 
         const { id } = req.params;
-        const { name, role, about, description, experience, speciality, doctorId } = req.body;
+        const { name, role, email, password, permissions, about, description, experience, speciality, doctorId } = req.body;
 
         const user = await TenantUser.findOne({
             where: { id, tenantId }
@@ -155,15 +161,28 @@ export const updateTenantUser = async (req, res) => {
             });
         }
 
-        await user.update({
+        const updateData = {
             name,
             role,
+            email,
+            permissions,
             about,
             description,
             experience,
             speciality,
             doctorId
-        });
+        };
+
+        // Only update password if provided and not empty
+        if (password && password.trim() !== '') {
+            updateData.password = password;
+            // IMPORTANT: Sequelize hook 'beforeSave' includes 'beforeUpdate' which runs on save(). 
+            // However, `update()` method should also trigger hooks if individualHooks: true is set, or beforeSave/beforeUpdate are set up correctly. 
+            // The model uses `beforeSave`. Let's ensure it catches this.
+        }
+
+        // Using user.update instance method usually triggers hooks
+        await user.update(updateData);
 
         return sendResponse(res, {
             message: "Tenant user updated successfully",

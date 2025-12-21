@@ -408,13 +408,15 @@ const getMenuForSidebar = async (req, res) => {
     const sectionIds = sections.map(s => s.id);
 
     // 2. Fetch ALL menu items for these sections in ONE query
+    // 2. Fetch ALL menu items for these sections in ONE query
     const whereItems = {
       sectionId: { [Op.in]: sectionIds },
       isActive: true
     };
 
-    if (allowedMenuItemIds && allowedMenuItemIds.length > 0) {
-      whereItems.id = { [Op.in]: allowedMenuItemIds };
+    // Store Permission Filter (ID based)
+    if (req.store && req.store.permissions && req.store.permissions.length > 0) {
+      whereItems.id = { [Op.in]: req.store.permissions };
     }
 
     const allMenuItems = await MenuItem.findAll({
@@ -422,11 +424,56 @@ const getMenuForSidebar = async (req, res) => {
       order: [['order', 'ASC']]
     });
 
-    // 3. Organise items into a hierarchy in-memory
+    // TenantUser Permission Filter (Key/JSON based)
+    let finalMenuItems = allMenuItems;
+    let finalSections = sections;
+
+    if (req.user && req.user.role === 'admin') {
+      // Admin gets everything (Business Owner)
+      finalMenuItems = allMenuItems;
+      finalSections = sections;
+    } else if (req.user && req.user.permissions) {
+      // 1. Filter Sections
+      finalSections = sections.filter(section => {
+        const perm = req.user.permissions.find(p => p.key === section.sectionId);
+        return perm && perm.access;
+      });
+
+      const allowedSectionIds = finalSections.map(s => s.id);
+
+      // 2. Filter Menu Items (Tabs)
+      finalMenuItems = allMenuItems.filter(item => {
+        // Must belong to an allowed section
+        if (!allowedSectionIds.includes(item.sectionId)) return false;
+
+        // Find section permission
+        const section = finalSections.find(s => s.id === item.sectionId);
+        const sectionPerm = req.user.permissions.find(p => p.key === section.sectionId);
+
+        if (!sectionPerm) return false;
+
+        // If no tabs defined, assume access if section is allowed
+        if (!sectionPerm.tabs || sectionPerm.tabs.length === 0) return true;
+
+        // Match Item Title to Tab Key (Fuzzy Match for cases like 'products' vs 'productsservices')
+        const itemKey = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const tabPerm = sectionPerm.tabs.find(t => {
+          const tabKey = t.key.toLowerCase().replace(/[^a-z0-9]+/g, '');
+          // Check for containment in either direction
+          return itemKey.includes(tabKey) || tabKey.includes(itemKey);
+        });
+
+        return tabPerm && tabPerm.access;
+      });
+    } else if (req.store) {
+      // Filter (already done via SQL ID check)
+    }
+
+    // 3. Organise items into a hierarchy in-memory (Use filtered lists)
     const itemsBySection = {};
     const itemsByParent = {};
 
-    allMenuItems.forEach(item => {
+    finalMenuItems.forEach(item => {
       // Role filtering
       if (userRole && item.allowedRoles && item.allowedRoles.length > 0) {
         if (!item.allowedRoles.includes(userRole)) {
@@ -463,7 +510,7 @@ const getMenuForSidebar = async (req, res) => {
 
     // 5. Build final sections map
     const sectionsMap = {};
-    sections.forEach(section => {
+    finalSections.forEach(section => {
       // Role filtering for section
       if (userRole && section.allowedRoles && section.allowedRoles.length > 0) {
         if (!section.allowedRoles.includes(userRole)) {
