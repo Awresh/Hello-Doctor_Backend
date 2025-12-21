@@ -1,0 +1,2 @@
+2025-11-29 12:17:54 [INFO]: Test info message {"testData":"some data"}
+2025-11-29 12:17:54 [ERROR]: Test error message {"errorDetails":"something went wrong"}

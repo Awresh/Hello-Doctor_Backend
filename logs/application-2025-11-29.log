@@ -1,0 +1,38 @@
+2025-11-29 12:21:47 [INFO]: Test info message {"testData":"some data"}
+2025-11-29 12:21:47 [ERROR]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:22:22 [INFO]: Test info message {"testData":"some data"}
+2025-11-29 12:22:22 [ERROR]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:25:59 [INFO] [node:events:525 DerivedLogger.emit]: Test info message {"testData":"some data"}
+2025-11-29 12:25:59 [ERROR] [node:events:525 DerivedLogger.emit]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:26:11 [INFO] [node:events:525 DerivedLogger.emit]: Test info message {"testData":"some data"}
+2025-11-29 12:26:11 [ERROR] [node:events:525 DerivedLogger.emit]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:26:22 [INFO] [node:events:525 DerivedLogger.emit]: Test info message {"testData":"some data"}
+2025-11-29 12:26:22 [ERROR] [node:events:525 DerivedLogger.emit]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:26:43 [INFO]: Test info message {"testData":"some data"}
+2025-11-29 12:26:43 [ERROR]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:27:04 [INFO]: Test info message {"testData":"some data"}
+2025-11-29 12:27:04 [ERROR]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:27:16 [INFO]: Test info message {"testData":"some data"}
+2025-11-29 12:27:16 [ERROR]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:27:34 [INFO] [test-logger.js:9 Object.<anonymous>]: Test info message {"testData":"some data"}
+2025-11-29 12:27:34 [ERROR] [test-logger.js:12 Object.<anonymous>]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:28:02 [INFO] [test-logger.js:9 Object.<anonymous>]: Test info message {"testData":"some data"}
+2025-11-29 12:28:02 [ERROR] [test-logger.js:12 Object.<anonymous>]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:28:58 [INFO] [test-logger.js:10 testNamedFunction]: Test info message {"testData":"some data"}
+2025-11-29 12:28:58 [ERROR] [test-logger.js:13 testNamedFunction]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:29:25 [INFO] [test-logger.js:10 testNamedFunction]: Test info message {"testData":"some data"}
+2025-11-29 12:29:25 [ERROR] [test-logger.js:13 testNamedFunction]: Test error message {"errorDetails":"something went wrong"}
+2025-11-29 12:40:46 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: POST /api/test 200 - 0ms {"method":"POST","url":"/api/test","status":200,"duration":"0ms","requestBody":{"name":"John"},"responseBody":{"success":true}}
+2025-11-29 12:40:46 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: POST /api/test 200 - 0ms {"method":"POST","url":"/api/test","status":200,"duration":"0ms","responseBody":{"success":true}}
+2025-11-29 12:40:46 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: GET /api/data 200 - 0ms {"method":"GET","url":"/api/data","status":200,"duration":"0ms"}
+2025-11-29 12:40:46 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: POST /api/data 200 - 0ms {"method":"POST","url":"/api/data","status":200,"duration":"0ms","requestBody":{"data":"new"},"responseBody":{"success":true}}
+2025-11-29 12:41:16 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: POST /api/test 200 - 0ms {"method":"POST","url":"/api/test","status":200,"duration":"0ms","requestBody":{"name":"John"},"responseBody":{"success":true}}
+2025-11-29 12:41:16 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: POST /api/test 200 - 0ms {"method":"POST","url":"/api/test","status":200,"duration":"0ms","responseBody":{"success":true}}
+2025-11-29 12:41:16 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: GET /api/data 200 - 0ms {"method":"GET","url":"/api/data","status":200,"duration":"0ms"}
+2025-11-29 12:41:16 [INFO] [request.logger.js:80 EventEmitter.<anonymous>]: POST /api/data 200 - 0ms {"method":"POST","url":"/api/data","status":200,"duration":"0ms","requestBody":{"data":"new"},"responseBody":{"success":true}}
+2025-11-29 12:46:33 [INFO] [request.logger.js:81 EventEmitter.<anonymous>]: POST /api/test 200 - 0ms {"method":"POST","url":"/api/test","status":200,"duration":"0ms","route":"/api/test","requestBody":{"name":"John"},"responseBody":{"success":true}}
+2025-11-29 12:46:33 [INFO] [request.logger.js:81 EventEmitter.<anonymous>]: POST /api/test 200 - 0ms {"method":"POST","url":"/api/test","status":200,"duration":"0ms","route":"/api/test","responseBody":{"success":true}}
+2025-11-29 12:46:33 [INFO] [request.logger.js:81 EventEmitter.<anonymous>]: GET /api/data 200 - 0ms {"method":"GET","url":"/api/data","status":200,"duration":"0ms","route":"/api/data"}
+2025-11-29 12:46:33 [INFO] [request.logger.js:81 EventEmitter.<anonymous>]: POST /api/data 200 - 0ms {"method":"POST","url":"/api/data","status":200,"duration":"0ms","route":"/api/data","requestBody":{"data":"new"},"responseBody":{"success":true}}
+2025-11-29 12:59:25 [ERROR] [error.middleware.js:41 errorMiddleware]: Error in POST /api/test-error: Test error: Invalid user data {"method":"POST","url":"/api/test-error","route":"/api/test-error","error":{"message":"Test error: Invalid user data","name":"Error","stack":"Error: Test error: Invalid user data\n    at Object.<anonymous> (/Users/kshitizbharti/Desktop/Hello-Doctor-main/back-end-node/test-error-middleware.js:45:16)\n    at Module._compile (node:internal/modules/cjs/loader:1149:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1203:10)\n    at Module.load (node:internal/modules/cjs/loader:1027:32)\n    at Module._load (node:internal/modules/cjs/loader:868:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)\n    at node:internal/main/run_main_module:23:47"},"requestBody":{"username":"john","email":"invalid-email"}}
+2025-11-29 12:59:25 [ERROR] [error.middleware.js:41 errorMiddleware]: Error in GET /api/server-error: Database connection failed {"method":"GET","url":"/api/server-error","route":"/api/server-error","query":{"page":"1"},"error":{"message":"Database connection failed","name":"Error","stack":"Error: Database connection failed\n    at Object.<anonymous> (/Users/kshitizbharti/Desktop/Hello-Doctor-main/back-end-node/test-error-middleware.js:71:16)\n    at Module._compile (node:internal/modules/cjs/loader:1149:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1203:10)\n    at Module.load (node:internal/modules/cjs/loader:1027:32)\n    at Module._load (node:internal/modules/cjs/loader:868:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)\n    at node:internal/main/run_main_module:23:47"}}

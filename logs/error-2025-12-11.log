@@ -1,0 +1,2 @@
+2025-12-11 17:37:47 [ERROR] [request.logger.js:96 ServerResponse.<anonymous>]: GET /sidebar/Inventory 500 - 30013ms {"method":"GET","url":"/sidebar/Inventory","status":500,"duration":"30013ms","route":"/sidebar/:businessType"}
+2025-12-11 17:37:47 [ERROR] [request.logger.js:96 ServerResponse.<anonymous>]: GET /sidebar/69391e127c8f649a5887127e 500 - 30015ms {"method":"GET","url":"/sidebar/69391e127c8f649a5887127e","status":500,"duration":"30015ms","route":"/sidebar/:businessType"}
