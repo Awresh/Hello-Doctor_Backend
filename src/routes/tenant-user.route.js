@@ -18,7 +18,7 @@ router.use(verifyToken);
 router.post(API_ROUTES.TENANT_USERS, createTenantUser);
 router.get(API_ROUTES.TENANT_USERS, getAllTenantUsers);
 router.get(API_ROUTES.TENANT_USER_BY_ID, getTenantUserById);
-router.put(API_ROUTES.TENANT_USER_BY_ID, updateTenantUser);
+router.patch(API_ROUTES.TENANT_USER_BY_ID, updateTenantUser);
 router.delete(API_ROUTES.TENANT_USER_BY_ID, deleteTenantUser);
 
 export default router;
