@@ -25,15 +25,24 @@ export const Appointment = sequelize.define('Appointment', {
             key: 'id'
         }
     },
+    doctorId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'doctor_id',
+        references: {
+            model: 'tenant_users',
+            key: 'id'
+        }
+    },
     appointmentDate: {
         type: DataTypes.DATEONLY,
         allowNull: false,
         field: 'appointment_date'
     },
-    appointmentTime: {
-        type: DataTypes.TIME,
+    appointmentSlot: {
+        type: DataTypes.STRING,
         allowNull: false,
-        field: 'appointment_time'
+        field: 'appointment_slot'
     },
     status: {
         type: DataTypes.ENUM('scheduled', 'confirmed', 'cancelled', 'completed', 'no-show'),

@@ -127,6 +127,8 @@ function setupAssociations() {
   Tenant.hasMany(Appointment, { foreignKey: 'tenantId' });
   Appointment.belongsTo(User, { foreignKey: 'userId' });
   User.hasMany(Appointment, { foreignKey: 'userId' });
+  Appointment.belongsTo(TenantUser, { foreignKey: 'doctorId', as: 'doctor' });
+  TenantUser.hasMany(Appointment, { foreignKey: 'doctorId', as: 'appointments' });
 
   // Slot Configuration associations
   // Clinic Slot Config

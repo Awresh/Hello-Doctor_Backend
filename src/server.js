@@ -13,6 +13,7 @@ import slotConfigRouter from './routes/slot-config.routes.js';
 import tenantUserRouter from './routes/tenant-user.route.js';
 import roleRouter from './routes/tenant/role.routes.js';
 import tenantRouter from './routes/tenant.route.js';
+import appointmentRouter from './routes/appointment.routes.js';
 import { verifyToken } from './middleware/auth.middleware.js';
 const app = express();
 
@@ -36,6 +37,7 @@ app.use(slotConfigRouter);
 app.use(tenantUserRouter);
 app.use(roleRouter);
 app.use(tenantRouter);
+app.use(appointmentRouter);
 // app.use('/api', routes);
 app.use(errorMiddleware);
 
