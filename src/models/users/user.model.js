@@ -13,11 +13,15 @@ export const User = sequelize.define('User', {
     },
     email: {
         type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
+        allowNull: true, // Changed to true to support multiple users per mobile without unique emails
         validate: {
             isEmail: true
         }
+    },
+    type: {
+        type: DataTypes.ENUM('parent', 'child'),
+        defaultValue: 'parent',
+        allowNull: false
     },
     address: {
         type: DataTypes.TEXT,

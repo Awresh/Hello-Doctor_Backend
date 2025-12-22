@@ -7,24 +7,81 @@ import { Op } from "sequelize"
  * Create a new appointment
  */
 export const createAppointment = async (req, res) => {
+    const transaction = await Appointment.sequelize.transaction();
     try {
-        const { tenantId, userId, doctorId, appointmentDate, appointmentSlot, notes } = req.body
+        const { doctorId, appointmentDate, appointmentSlot, notes } = req.body
+        let { userId, name, mobile, address, email } = req.body
+        const tenantId = req.tenant.id;
 
-        if (!tenantId || !userId || !doctorId || !appointmentDate || !appointmentSlot) {
+        if (!tenantId) {
+            await transaction.rollback();
             return sendResponse(res, {
-                statusCode: STATUS_CODES.BAD_REQUEST,
+                statusCode: STATUS_CODES.UNAUTHORIZED,
                 success: false,
-                message: 'Tenant ID, User ID, Doctor ID, Date, and Slot are required.'
+                message: 'Tenant ID not found.'
             })
         }
 
-        // 1. Get Available Slots for that doctor on that date
+        if (!doctorId || !appointmentDate || !appointmentSlot) {
+            await transaction.rollback();
+            return sendResponse(res, {
+                statusCode: STATUS_CODES.BAD_REQUEST,
+                success: false,
+                message: 'Doctor ID, Date, and Slot are required.'
+            })
+        }
+
+        // 1. Handle User Creation if userId is not provided
+        if (!userId) {
+            if (!name || !mobile) {
+                await transaction.rollback();
+                return sendResponse(res, {
+                    statusCode: STATUS_CODES.BAD_REQUEST,
+                    success: false,
+                    message: 'User ID or (Name and Mobile) are required to book an appointment.'
+                })
+            }
+
+            // Check if any user exists with this mobile
+            const existingMobileUser = await User.findOne({
+                where: { mobile },
+                transaction
+            })
+
+            // Check if a specific user exists with this name and mobile
+            let user = await User.findOne({
+                where: {
+                    name,
+                    mobile
+                },
+                transaction
+            })
+
+            if (!user) {
+                // Create new user
+                // If no one has this mobile, they are the 'parent'. Otherwise, they are a 'child'.
+                const userType = existingMobileUser ? 'child' : 'parent'
+
+                user = await User.create({
+                    name,
+                    mobile,
+                    address,
+                    email,
+                    type: userType,
+                    isActive: true
+                }, { transaction })
+            }
+            userId = user.id
+        }
+
+        // 2. Get Available Slots for that doctor on that date
         const dayName = new Date(appointmentDate).toLocaleDateString('en-US', { weekday: 'long' })
         let availableSlots = []
 
         // Check Override
         const override = await SlotOverride.findOne({
-            where: { tenantId, doctorId, date: appointmentDate }
+            where: { tenantId, doctorId, date: appointmentDate },
+            transaction
         })
 
         if (override) {
@@ -32,7 +89,8 @@ export const createAppointment = async (req, res) => {
         } else {
             // Check Doctor Config
             const doctorConfig = await DoctorSlotConfig.findOne({
-                where: { tenantId, doctorId }
+                where: { tenantId, doctorId },
+                transaction
             })
 
             if (doctorConfig && !doctorConfig.useClinicSlots) {
@@ -40,7 +98,8 @@ export const createAppointment = async (req, res) => {
             } else {
                 // Fallback to Clinic Config
                 const clinicConfig = await ClinicSlotConfig.findOne({
-                    where: { tenantId }
+                    where: { tenantId },
+                    transaction
                 })
                 if (clinicConfig) {
                     availableSlots = clinicConfig.weeklySlots[dayName] || []
@@ -48,9 +107,10 @@ export const createAppointment = async (req, res) => {
             }
         }
 
-        // 2. Find the specific slot
+        // 3. Find the specific slot
         const slot = availableSlots.find(s => s.startTime === appointmentSlot)
         if (!slot) {
+            await transaction.rollback();
             return sendResponse(res, {
                 statusCode: STATUS_CODES.BAD_REQUEST,
                 success: false,
@@ -58,7 +118,7 @@ export const createAppointment = async (req, res) => {
             })
         }
 
-        // 3. Check if slot is already full
+        // 4. Check if slot is already full
         const appointmentCount = await Appointment.count({
             where: {
                 tenantId,
@@ -66,10 +126,12 @@ export const createAppointment = async (req, res) => {
                 appointmentDate,
                 appointmentSlot,
                 status: { [Op.notIn]: ['cancelled'] }
-            }
+            },
+            transaction
         })
 
         if (appointmentCount >= (slot.maxPatients || 1)) {
+            await transaction.rollback();
             return sendResponse(res, {
                 statusCode: STATUS_CODES.BAD_REQUEST,
                 success: false,
@@ -77,7 +139,7 @@ export const createAppointment = async (req, res) => {
             })
         }
 
-        // 4. Create the appointment
+        // 5. Create the appointment
         const appointment = await Appointment.create({
             tenantId,
             userId,
@@ -86,7 +148,9 @@ export const createAppointment = async (req, res) => {
             appointmentSlot,
             notes,
             status: 'scheduled'
-        })
+        }, { transaction })
+
+        await transaction.commit();
 
         return sendResponse(res, {
             statusCode: STATUS_CODES.CREATED,
@@ -95,6 +159,7 @@ export const createAppointment = async (req, res) => {
         })
 
     } catch (error) {
+        await transaction.rollback();
         console.error('Create Appointment Error:', error)
         return sendResponse(res, {
             statusCode: STATUS_CODES.INTERNAL_SERVER_ERROR,
@@ -109,10 +174,10 @@ export const createAppointment = async (req, res) => {
  */
 export const getAppointments = async (req, res) => {
     try {
-        const { tenantId, doctorId, userId, date, status } = req.query
-        const where = {}
+        const { doctorId, userId, date, status } = req.query
+        const tenantId = req.tenant.id;
+        const where = { tenantId }
 
-        if (tenantId) where.tenantId = tenantId
         if (doctorId) where.doctorId = doctorId
         if (userId) where.userId = userId
         if (date) where.appointmentDate = date
@@ -147,7 +212,9 @@ export const getAppointments = async (req, res) => {
 export const getAppointmentById = async (req, res) => {
     try {
         const { id } = req.params
-        const appointment = await Appointment.findByPk(id, {
+        const tenantId = req.tenant.id;
+        const appointment = await Appointment.findOne({
+            where: { id, tenantId },
             include: [
                 { model: User, attributes: ['id', 'name', 'email'] },
                 { model: TenantUser, as: 'doctor', attributes: ['id', 'name', 'speciality'] }
@@ -183,8 +250,9 @@ export const updateAppointmentStatus = async (req, res) => {
     try {
         const { id } = req.params
         const { status } = req.body
+        const tenantId = req.tenant.id;
 
-        const appointment = await Appointment.findByPk(id)
+        const appointment = await Appointment.findOne({ where: { id, tenantId } })
         if (!appointment) {
             return sendResponse(res, {
                 statusCode: STATUS_CODES.NOT_FOUND,
