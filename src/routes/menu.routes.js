@@ -2,6 +2,8 @@ import express from 'express'
 import menuController from '../controllers/menu/menu.controllers.js'
 import { API_ROUTES } from '../config/serverConfig.js'
 const router = express.Router()
+import { verifyToken as authenticateUser } from '../middleware/auth.middleware.js';
+
 
 // ============================================
 // BASE ROUTE MANAGEMENT
@@ -12,13 +14,13 @@ const router = express.Router()
  * @desc    Set base route for business type
  * @body    { businessType, baseRoute }
  */
-router.post('/base-route', menuController.setBaseRoute);
+router.post('/base-route', authenticateUser, menuController.setBaseRoute);
 
 /**
  * @route   GET /api/menu/base-routes
  * @desc    Get all base routes
  */
-router.get('/base-routes', menuController.getAllBaseRoutes);
+router.get('/base-routes', authenticateUser, menuController.getAllBaseRoutes);
 
 // ============================================
 // SECTION MANAGEMENT
@@ -29,31 +31,31 @@ router.get('/base-routes', menuController.getAllBaseRoutes);
  * @desc    Create new section
  * @body    { businessType, sectionId, label, type, order }
  */
-router.post('/sections', menuController.createSection);
+router.post('/sections', authenticateUser, menuController.createSection);
 
 /**
  * @route   GET /api/menu/sections/:businessType
  * @desc    Get all sections for a business type
  */
-router.get('/sections/:businessType', menuController.getSectionsByBusinessType);
+router.get('/sections/:businessType', authenticateUser, menuController.getSectionsByBusinessType);
 
 /**
  * @route   GET /api/menu/section/:id
  * @desc    Get section by ID
  */
-router.get('/section/:id', menuController.getSectionById);
+router.get('/section/:id', authenticateUser, menuController.getSectionById);
 
 /**
  * @route   PUT /api/menu/section/:id
  * @desc    Update section
  */
-router.put('/section/:id', menuController.updateSection);
+router.put('/section/:id', authenticateUser, menuController.updateSection);
 
 /**
  * @route   DELETE /api/menu/section/:id
  * @desc    Delete section
  */
-router.delete('/section/:id', menuController.deleteSection);
+router.delete('/section/:id', authenticateUser, menuController.deleteSection);
 
 // ============================================
 // MENU SIDEBAR FORMAT
@@ -64,7 +66,7 @@ router.delete('/section/:id', menuController.deleteSection);
  * @desc    Get menu in sidebarService format (with sections and baseRoute)
  * @query   userRole - optional
  */
-router.get('/sidebar', menuController.getMenuForSidebar);
+router.get('/sidebar', authenticateUser, menuController.getMenuForSidebar);
 
 // ============================================
 // MENU ITEM CRUD
@@ -75,30 +77,30 @@ router.get('/sidebar', menuController.getMenuForSidebar);
  * @desc    Create new menu item
  * @body    { sectionRef, title, icon, path, parentId, order, allowedRoles }
  */
-router.post('/item', menuController.createMenuItem);
+router.post('/item', authenticateUser, menuController.createMenuItem);
 
 /**
  * @route   GET /api/menu/items/section/:sectionId
  * @desc    Get all menu items for a section
  */
-router.get('/items/section/:sectionId', menuController.getMenuItemsBySection);
+router.get('/items/section/:sectionId', authenticateUser, menuController.getMenuItemsBySection);
 
 /**
  * @route   GET /api/menu/item/:id
  * @desc    Get single menu item by ID
  */
-router.get('/item/:id', menuController.getMenuItemById);
+router.get('/item/:id', authenticateUser, menuController.getMenuItemById);
 
 /**
  * @route   PUT /api/menu/item/:id
  * @desc    Update menu item
  */
-router.put('/item/:id', menuController.updateMenuItem);
+router.put('/item/:id', authenticateUser, menuController.updateMenuItem);
 
 /**
  * @route   DELETE /api/menu/item/:id
  * @desc    Delete menu item
  */
-router.delete('/item/:id', menuController.deleteMenuItem);
+router.delete('/item/:id', authenticateUser, menuController.deleteMenuItem);
 
 export default router
