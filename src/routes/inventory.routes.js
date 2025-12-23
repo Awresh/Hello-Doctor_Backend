@@ -10,88 +10,87 @@ import ProductController from '../controllers/inventory/product.controller.js';
 import SupplierController from "../controllers/inventory/supplier.controller.js";
 import PurchaseBillController from "../controllers/inventory/purchase-bill.controller.js";
 import { createSalesBill, getAllSalesBills } from '../controllers/inventory/sales-bill.controller.js';
-import { verifyToken as authenticateUser } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 // Sales Bills
-router.post('/inventory/sales-bills', authenticateUser, createSalesBill);
-router.get('/inventory/sales-bills', authenticateUser, getAllSalesBills);
+router.post('/inventory/sales-bills', createSalesBill);
+router.get('/inventory/sales-bills', getAllSalesBills);
 
 // Customers
 import { createCustomer, searchCustomers } from '../controllers/inventory/customer.controller.js';
-router.post(API_ROUTES.CUSTOMERS, authenticateUser, createCustomer);
-router.get(API_ROUTES.CUSTOMER_SEARCH, authenticateUser, searchCustomers);
+router.post(API_ROUTES.CUSTOMERS, createCustomer);
+router.get(API_ROUTES.CUSTOMER_SEARCH, searchCustomers);
 
 // --- Categories ---
-router.get(API_ROUTES.CATEGORIES, authenticateUser, CategoryController.getAllCategories);
-router.get(API_ROUTES.CATEGORY_BY_ID, authenticateUser, CategoryController.getCategoryById);
-router.post(API_ROUTES.CATEGORIES, authenticateUser, CategoryController.createCategory);
-router.patch(API_ROUTES.CATEGORY_BY_ID, authenticateUser, CategoryController.updateCategory);
-router.delete(API_ROUTES.CATEGORY_BY_ID, authenticateUser, CategoryController.deleteCategory);
-router.patch(API_ROUTES.CATEGORY_DISABLE, authenticateUser, CategoryController.disableCategory);
-router.patch(API_ROUTES.CATEGORY_ENABLE, authenticateUser, CategoryController.enableCategory);
+router.get(API_ROUTES.CATEGORIES, CategoryController.getAllCategories);
+router.get(API_ROUTES.CATEGORY_BY_ID, CategoryController.getCategoryById);
+router.post(API_ROUTES.CATEGORIES, CategoryController.createCategory);
+router.patch(API_ROUTES.CATEGORY_BY_ID, CategoryController.updateCategory);
+router.delete(API_ROUTES.CATEGORY_BY_ID, CategoryController.deleteCategory);
+router.patch(API_ROUTES.CATEGORY_DISABLE, CategoryController.disableCategory);
+router.patch(API_ROUTES.CATEGORY_ENABLE, CategoryController.enableCategory);
 
 // --- Units ---
-router.get(API_ROUTES.UNITS, authenticateUser, UnitController.getAllUnits);
-router.get(API_ROUTES.UNIT_BY_ID, authenticateUser, UnitController.getUnitById);
-router.post(API_ROUTES.UNITS, authenticateUser, UnitController.createUnit);
-router.patch(API_ROUTES.UNIT_BY_ID, authenticateUser, UnitController.updateUnit);
-router.delete(API_ROUTES.UNIT_BY_ID, authenticateUser, UnitController.deleteUnit);
-router.patch(API_ROUTES.UNIT_DISABLE, authenticateUser, UnitController.disableUnit);
-router.patch(API_ROUTES.UNIT_ENABLE, authenticateUser, UnitController.enableUnit);
+router.get(API_ROUTES.UNITS, UnitController.getAllUnits);
+router.get(API_ROUTES.UNIT_BY_ID, UnitController.getUnitById);
+router.post(API_ROUTES.UNITS, UnitController.createUnit);
+router.patch(API_ROUTES.UNIT_BY_ID, UnitController.updateUnit);
+router.delete(API_ROUTES.UNIT_BY_ID, UnitController.deleteUnit);
+router.patch(API_ROUTES.UNIT_DISABLE, UnitController.disableUnit);
+router.patch(API_ROUTES.UNIT_ENABLE, UnitController.enableUnit);
 
 // --- Brands ---
-router.get(API_ROUTES.BRANDS, authenticateUser, BrandController.getAllBrands);
-router.get(API_ROUTES.BRAND_BY_ID, authenticateUser, BrandController.getBrandById);
-router.post(API_ROUTES.BRANDS, authenticateUser, BrandController.createBrand);
-router.patch(API_ROUTES.BRAND_BY_ID, authenticateUser, BrandController.updateBrand);
-router.delete(API_ROUTES.BRAND_BY_ID, authenticateUser, BrandController.deleteBrand);
-router.patch(API_ROUTES.BRAND_DISABLE, authenticateUser, BrandController.disableBrand);
-router.patch(API_ROUTES.BRAND_ENABLE, authenticateUser, BrandController.enableBrand);
+router.get(API_ROUTES.BRANDS, BrandController.getAllBrands);
+router.get(API_ROUTES.BRAND_BY_ID, BrandController.getBrandById);
+router.post(API_ROUTES.BRANDS, BrandController.createBrand);
+router.patch(API_ROUTES.BRAND_BY_ID, BrandController.updateBrand);
+router.delete(API_ROUTES.BRAND_BY_ID, BrandController.deleteBrand);
+router.patch(API_ROUTES.BRAND_DISABLE, BrandController.disableBrand);
+router.patch(API_ROUTES.BRAND_ENABLE, BrandController.enableBrand);
 
 // --- Products ---
-router.get(API_ROUTES.PRODUCTS, authenticateUser, ProductController.getAllProducts);
-router.get(API_ROUTES.PRODUCT_BY_ID, authenticateUser, ProductController.getProductById);
-router.post(API_ROUTES.PRODUCTS, authenticateUser, ProductController.createProduct);
-router.patch(API_ROUTES.PRODUCT_BY_ID, authenticateUser, ProductController.updateProduct);
-router.delete(API_ROUTES.PRODUCT_BY_ID, authenticateUser, ProductController.deleteProduct);
-router.patch(API_ROUTES.PRODUCT_DISABLE, authenticateUser, ProductController.disableProduct);
-router.patch(API_ROUTES.PRODUCT_ENABLE, authenticateUser, ProductController.enableProduct);
+router.get(API_ROUTES.PRODUCTS, ProductController.getAllProducts);
+router.get(API_ROUTES.PRODUCT_BY_ID, ProductController.getProductById);
+router.post(API_ROUTES.PRODUCTS, ProductController.createProduct);
+router.patch(API_ROUTES.PRODUCT_BY_ID, ProductController.updateProduct);
+router.delete(API_ROUTES.PRODUCT_BY_ID, ProductController.deleteProduct);
+router.patch(API_ROUTES.PRODUCT_DISABLE, ProductController.disableProduct);
+router.patch(API_ROUTES.PRODUCT_ENABLE, ProductController.enableProduct);
 
 // --- Suppliers ---
-router.get(API_ROUTES.SUPPLIERS, authenticateUser, SupplierController.getAll);
-router.post(API_ROUTES.SUPPLIERS, authenticateUser, SupplierController.create);
-router.patch(API_ROUTES.SUPPLIER_BY_ID, authenticateUser, SupplierController.update);
-router.delete(API_ROUTES.SUPPLIER_DELETE, authenticateUser, SupplierController.delete);
+router.get(API_ROUTES.SUPPLIERS, SupplierController.getAll);
+router.post(API_ROUTES.SUPPLIERS, SupplierController.create);
+router.patch(API_ROUTES.SUPPLIER_BY_ID, SupplierController.update);
+router.delete(API_ROUTES.SUPPLIER_DELETE, SupplierController.delete);
 
 // --- Stores ---
-router.get(API_ROUTES.STORES, authenticateUser, StoreController.getAllStores);
-router.get(API_ROUTES.STORE_BY_ID, authenticateUser, StoreController.getStoreById);
-router.post(API_ROUTES.STORES, authenticateUser, StoreController.createStore);
-router.patch(API_ROUTES.STORE_BY_ID, authenticateUser, StoreController.updateStore);
-router.delete(API_ROUTES.STORE_BY_ID, authenticateUser, StoreController.deleteStore);
-router.patch(API_ROUTES.STORE_DISABLE, authenticateUser, StoreController.disableStore);
-router.patch(API_ROUTES.STORE_ENABLE, authenticateUser, StoreController.enableStore);
-router.post(API_ROUTES.STORES_LOGIN, authenticateUser, StoreController.loginStore);
+router.get(API_ROUTES.STORES, StoreController.getAllStores);
+router.get(API_ROUTES.STORE_BY_ID, StoreController.getStoreById);
+router.post(API_ROUTES.STORES, StoreController.createStore);
+router.patch(API_ROUTES.STORE_BY_ID, StoreController.updateStore);
+router.delete(API_ROUTES.STORE_BY_ID, StoreController.deleteStore);
+router.patch(API_ROUTES.STORE_DISABLE, StoreController.disableStore);
+router.patch(API_ROUTES.STORE_ENABLE, StoreController.enableStore);
+router.post(API_ROUTES.STORES_LOGIN, StoreController.loginStore);
 
 // --- Purchase Bills ---
-router.get(API_ROUTES.PURCHASE_BILLS, authenticateUser, PurchaseBillController.getAllPurchaseBills);
-router.get(API_ROUTES.PURCHASE_BILL_BY_ID, authenticateUser, PurchaseBillController.getPurchaseBillById);
-router.post(API_ROUTES.PURCHASE_BILLS, authenticateUser, PurchaseBillController.createPurchaseBill);
-router.patch(API_ROUTES.PURCHASE_BILL_BY_ID, authenticateUser, PurchaseBillController.updatePurchaseBill);
-router.delete(API_ROUTES.PURCHASE_BILL_BY_ID, authenticateUser, PurchaseBillController.deletePurchaseBill);
-router.post(`${API_ROUTES.PURCHASE_BILL_BY_ID}/payments`, authenticateUser, PurchaseBillController.addPayment);
+router.get(API_ROUTES.PURCHASE_BILLS, PurchaseBillController.getAllPurchaseBills);
+router.get(API_ROUTES.PURCHASE_BILL_BY_ID, PurchaseBillController.getPurchaseBillById);
+router.post(API_ROUTES.PURCHASE_BILLS, PurchaseBillController.createPurchaseBill);
+router.patch(API_ROUTES.PURCHASE_BILL_BY_ID, PurchaseBillController.updatePurchaseBill);
+router.delete(API_ROUTES.PURCHASE_BILL_BY_ID, PurchaseBillController.deletePurchaseBill);
+router.post(`${API_ROUTES.PURCHASE_BILL_BY_ID}/payments`, PurchaseBillController.addPayment);
 router.get(API_ROUTES.SUPPLIER_PRODUCTS, PurchaseBillController.getProductsBySupplier);
 router.get(API_ROUTES.PRODUCT_PRICE_HISTORY, PurchaseBillController.getPriceHistory);
 
 // --- Makes ---
-router.get(API_ROUTES.MAKES, authenticateUser, MakeController.getAllMakes);
-router.get(API_ROUTES.MAKE_BY_ID, authenticateUser, MakeController.getMakeById);
-router.post(API_ROUTES.MAKES, authenticateUser, MakeController.createMake);
-router.patch(API_ROUTES.MAKE_BY_ID, authenticateUser, MakeController.updateMake);
-router.delete(API_ROUTES.MAKE_BY_ID, authenticateUser, MakeController.deleteMake);
-router.patch(API_ROUTES.MAKE_DISABLE, authenticateUser, MakeController.disableMake);
-router.patch(API_ROUTES.MAKE_ENABLE, authenticateUser, MakeController.enableMake);
+router.get(API_ROUTES.MAKES, MakeController.getAllMakes);
+router.get(API_ROUTES.MAKE_BY_ID, MakeController.getMakeById);
+router.post(API_ROUTES.MAKES, MakeController.createMake);
+router.patch(API_ROUTES.MAKE_BY_ID, MakeController.updateMake);
+router.delete(API_ROUTES.MAKE_BY_ID, MakeController.deleteMake);
+router.patch(API_ROUTES.MAKE_DISABLE, MakeController.disableMake);
+router.patch(API_ROUTES.MAKE_ENABLE, MakeController.enableMake);
 
 export default router;

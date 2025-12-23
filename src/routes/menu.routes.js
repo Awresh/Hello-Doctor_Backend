@@ -55,7 +55,7 @@ router.put('/section/:id', authenticateUser, menuController.updateSection);
  * @route   DELETE /api/menu/section/:id
  * @desc    Delete section
  */
-router.delete('/section/:id', authenticateUser, menuController.deleteSection);
+router.delete('/section/:id', menuController.deleteSection);
 
 // ============================================
 // MENU SIDEBAR FORMAT
@@ -66,7 +66,7 @@ router.delete('/section/:id', authenticateUser, menuController.deleteSection);
  * @desc    Get menu in sidebarService format (with sections and baseRoute)
  * @query   userRole - optional
  */
-router.get('/sidebar', authenticateUser, menuController.getMenuForSidebar);
+router.get('/sidebar', menuController.getMenuForSidebar);
 
 // ============================================
 // MENU ITEM CRUD
@@ -77,13 +77,13 @@ router.get('/sidebar', authenticateUser, menuController.getMenuForSidebar);
  * @desc    Create new menu item
  * @body    { sectionRef, title, icon, path, parentId, order, allowedRoles }
  */
-router.post('/item', authenticateUser, menuController.createMenuItem);
+router.post('/item', menuController.createMenuItem);
 
 /**
  * @route   GET /api/menu/items/section/:sectionId
  * @desc    Get all menu items for a section
  */
-router.get('/items/section/:sectionId', authenticateUser, menuController.getMenuItemsBySection);
+router.get('/items/section/:sectionId', menuController.getMenuItemsBySection);
 
 /**
  * @route   GET /api/menu/item/:id
