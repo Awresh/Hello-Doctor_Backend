@@ -1,7 +1,9 @@
 import { TenantUser } from "../../models/tenant/tenent.user.model.js";
+import { Tenant, BusinessType, Role } from "../../models/index.js";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
 import { MESSAGES } from "../../config/serverConfig.js";
+import { Op } from "sequelize";
 
 /**
  * Helper to get and validate tenantId from request
@@ -36,6 +38,77 @@ export const createTenantUser = async (req, res) => {
             });
         }
 
+        // Determine if user is a doctor based on Role Type
+        let isDoctor = false;
+        // Check if role is an ID (integer) or string logic fallback
+        if (!isNaN(role)) {
+             const selectedRole = await Role.findByPk(role);
+             if (selectedRole && selectedRole.roleType === 'doctor') {
+                 isDoctor = true;
+             }
+        }
+        // Fallback or legacy check
+        if (!isDoctor) {
+             isDoctor = String(role).toLowerCase() === 'doctor' || role == 3 || role === '3';
+        }
+
+        // --- License Limit Check ---
+        const tenant = await Tenant.findByPk(tenantId, {
+            include: [{ model: BusinessType }]
+        });
+
+        if (tenant && tenant.BusinessType) {
+            const maxUsers = tenant.customMaxUsers !== null ? tenant.customMaxUsers : (tenant.BusinessType.maxUsers || 0);
+            const maxDoctors = tenant.customMaxDoctors !== null ? tenant.customMaxDoctors : (tenant.BusinessType.maxDoctors || 0);
+            const maxStaff = tenant.customMaxStaff !== null ? tenant.customMaxStaff : (tenant.BusinessType.maxStaff || 0);
+
+            // 1. Total Users Check
+            if (maxUsers > 0) {
+                const totalUsers = await TenantUser.count({ where: { tenantId } });
+                if (totalUsers >= maxUsers) {
+                    return sendResponse(res, { statusCode: STATUS_CODES.FORBIDDEN, success: false, message: `User creation limit reached. Max allowed: ${maxUsers}` });
+                }
+            }
+            
+            // 2. Doctor Limit Check
+            if (isDoctor && maxDoctors > 0) {
+                // Count existing doctors by isDoctor flag OR legacy role check
+                const doctorCount = await TenantUser.count({ 
+                    where: { 
+                        tenantId,
+                        [Op.or]: [
+                            { isDoctor: true },
+                            { role: { [Op.iLike]: 'doctor' } },
+                            { role: '3' }
+                        ]
+                    } 
+                });
+                
+                if (doctorCount >= maxDoctors) {
+                    return sendResponse(res, { statusCode: STATUS_CODES.FORBIDDEN, success: false, message: `Doctor creation limit reached. Max allowed: ${maxDoctors}` });
+                }
+            }
+
+            // 3. Staff Limit Check (Non-Doctors)
+            if (!isDoctor && maxStaff > 0) {
+                 const staffCount = await TenantUser.count({ 
+                    where: { 
+                        tenantId,
+                         [Op.and]: [
+                            { isDoctor: false }, // Explicitly not doctor flag
+                            { role: { [Op.notILike]: 'doctor' } },
+                            { role: { [Op.ne]: '3' } }
+                        ]
+                    } 
+                });
+
+                if (staffCount >= maxStaff) {
+                    return sendResponse(res, { statusCode: STATUS_CODES.FORBIDDEN, success: false, message: `Staff creation limit reached. Max allowed: ${maxStaff}` });
+                }
+            }
+        }
+        // ---------------------------
+
         const tenantUser = await TenantUser.create({
             name,
             role,
@@ -47,7 +120,8 @@ export const createTenantUser = async (req, res) => {
             experience,
             speciality,
             tenantId,
-            doctorId
+            doctorId,
+            isDoctor // Set flag
         });
 
         return sendResponse(res, {

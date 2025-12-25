@@ -17,7 +17,7 @@ server.listen(PORT, async() => {
         
         // Sync database (create tables if they don't exist)
         // verify that the table doesn't already exist
-        // await sequelize.sync(); 
+        await sequelize.sync({ alter: true }); 
         logger.info('Database synchronized successfully.');
         logger.info('Database synchronized successfully.');
         

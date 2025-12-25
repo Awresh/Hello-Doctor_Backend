@@ -36,6 +36,27 @@ export const Tenant = sequelize.define('Tenant', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  // Custom Override Limits (null means use BusinessType default)
+  customMaxRoles: {
+    type: DataTypes.INTEGER,
+    defaultValue: null
+  },
+  customMaxUsers: {
+    type: DataTypes.INTEGER,
+    defaultValue: null
+  },
+  customMaxStores: {
+    type: DataTypes.INTEGER,
+    defaultValue: null
+  },
+  customMaxDoctors: {
+    type: DataTypes.INTEGER,
+    defaultValue: null
+  },
+  customMaxStaff: {
+    type: DataTypes.INTEGER,
+    defaultValue: null
   }
 }, {
   tableName: 'tenants',

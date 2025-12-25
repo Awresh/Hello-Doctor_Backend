@@ -8,17 +8,44 @@ import { Op } from "sequelize"
 // Update Clinic Slots (Admin only)
 export const updateClinicSlots = async (req, res) => {
     try {
-        const { weeklySlots } = req.body
-        const tenantId = req.user.tenantId || req.body.tenantId // Admin might provide tenantId
+        let { weeklySlots } = req.body
+        const tenantId = req.user?.tenantId || req.tenant?.id || req.body.tenantId
 
         // Admin check (assuming verifyToken adds req.admin)
-        if (!req.admin) {
-            return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. Admin access required.' })
+        if (!req.admin && !req.user?.isAdmin && !req.user?.role?.includes('admin')) {
+             if (!req.user && !req.tenant && !tenantId) {
+                return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. No user found.' })
+            }
         }
 
         if (!tenantId) {
             return sendResponse(res, { statusCode: STATUS_CODES.BAD_REQUEST, success: false, message: 'Tenant ID is required.' })
         }
+
+        // --- VALIDATION: Remove Duplicates ---
+        if (weeklySlots) {
+             Object.keys(weeklySlots).forEach(day => {
+                 const slots = weeklySlots[day];
+                 if (Array.isArray(slots)) {
+                     // Deduplicate by startTime or value
+                     // Assuming slots can be objects {startTime: "09:00"} or strings "09:00"
+                     const uniqueMap = new Map();
+                     slots.forEach(s => {
+                         const time = typeof s === 'string' ? s : s.startTime;
+                         if (!uniqueMap.has(time)) {
+                             uniqueMap.set(time, s);
+                         }
+                     });
+                     // Sort by time
+                     weeklySlots[day] = Array.from(uniqueMap.values()).sort((a, b) => {
+                         const timeA = typeof a === 'string' ? a : a.startTime;
+                         const timeB = typeof b === 'string' ? b : b.startTime;
+                         return timeA.localeCompare(timeB);
+                     });
+                 }
+             });
+        }
+        // -------------------------------------
 
         let config = await ClinicSlotConfig.findOne({ where: { tenantId } })
 
@@ -42,11 +69,13 @@ export const updateClinicSlots = async (req, res) => {
 // Get Clinic Slots (Admin only)
 export const getClinicSlots = async (req, res) => {
     try {
-        const tenantId = req.user.tenantId || req.query.tenantId
+        const tenantId = req.user?.tenantId || req.tenant?.id || req.query.tenantId
 
         // Admin check
-        if (!req.admin) {
-            return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. Admin access required.' })
+        if (!req.admin && !req.user?.isAdmin && !req.user?.role?.includes('admin')) {
+             if (!req.user && !req.tenant && !tenantId) {
+                return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. No user found.' })
+            }
         }
 
         if (!tenantId) {
@@ -72,12 +101,14 @@ export const getClinicSlots = async (req, res) => {
 export const updateDoctorSlots = async (req, res) => {
     try {
         const { doctorId } = req.params
-        const { useClinicSlots, customWeeklySlots } = req.body
-        const tenantId = req.user.tenantId || req.body.tenantId
+        const { useClinicSlots, customWeeklySlots, numberOfPerSlot, onlinePatients, offlinePatients } = req.body
+        const tenantId = req.user?.tenantId || req.tenant?.id || req.body.tenantId
 
         // Admin check
-        if (!req.admin) {
-            return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. Admin access required.' })
+        if (!req.admin && !req.user?.isAdmin && !req.user?.role?.includes('admin')) {
+             if (!req.user && !req.tenant && !tenantId) {
+                return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. No user found.' })
+            }
         }
 
         if (!tenantId) {
@@ -93,13 +124,20 @@ export const updateDoctorSlots = async (req, res) => {
         if (config) {
             if (useClinicSlots !== undefined) config.useClinicSlots = useClinicSlots
             if (customWeeklySlots !== undefined) config.customWeeklySlots = customWeeklySlots
+            if (numberOfPerSlot !== undefined) config.numberOfPerSlot = numberOfPerSlot
+            if (onlinePatients !== undefined) config.onlinePatients = onlinePatients
+            if (offlinePatients !== undefined) config.offlinePatients = offlinePatients
             await config.save()
         } else {
+            console.log("Creating DoctorSlotConfig with:", { onlinePatients, offlinePatients, numberOfPerSlot });
             config = await DoctorSlotConfig.create({
                 tenantId,
                 doctorId,
                 useClinicSlots: useClinicSlots !== undefined ? useClinicSlots : true,
-                customWeeklySlots: customWeeklySlots || {}
+                customWeeklySlots: customWeeklySlots || {},
+                numberOfPerSlot: numberOfPerSlot || 1,
+                onlinePatients: onlinePatients || 0,
+                offlinePatients: offlinePatients || 0
             })
         }
 
@@ -114,11 +152,13 @@ export const updateDoctorSlots = async (req, res) => {
 export const getDoctorSlots = async (req, res) => {
     try {
         const { doctorId } = req.params
-        const tenantId = req.user.tenantId || req.query.tenantId
+        const tenantId = req.user?.tenantId || req.tenant?.id || req.query.tenantId
 
         // Admin check
-        if (!req.admin) {
-            return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. Admin access required.' })
+        if (!req.admin && !req.user?.isAdmin && !req.user?.role?.includes('admin')) {
+             if (!req.user && !req.tenant && !tenantId) {
+                return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. No user found.' })
+            }
         }
 
         if (!tenantId) {
@@ -145,11 +185,13 @@ export const getDoctorSlots = async (req, res) => {
 export const createOverride = async (req, res) => {
     try {
         const { doctorId, date, slots } = req.body
-        const tenantId = req.user.tenantId || req.body.tenantId
+        const tenantId = req.user?.tenantId || req.tenant?.id || req.body.tenantId
 
         // Admin check
-        if (!req.admin) {
-            return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. Admin access required.' })
+        if (!req.admin && !req.user?.isAdmin && !req.user?.role?.includes('admin')) {
+             if (!req.user && !req.tenant && !tenantId) {
+                return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. No user found.' })
+            }
         }
 
         if (!tenantId) {

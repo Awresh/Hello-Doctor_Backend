@@ -14,6 +14,31 @@ export const BusinessType = sequelize.define('BusinessType', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  maxRoles: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Maximum number of roles allowed. 0 for unlimited.'
+  },
+  maxUsers: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Maximum number of total users allowed. 0 for unlimited.'
+  },
+  maxStores: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Maximum number of stores allowed. 0 for unlimited.'
+  },
+  maxDoctors: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Maximum number of doctors allowed. 0 for unlimited.'
+  },
+  maxStaff: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Maximum number of staff allowed. 0 for unlimited.'
   }
 }, {
   tableName: 'business_types',

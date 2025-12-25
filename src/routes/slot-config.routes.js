@@ -1,22 +1,23 @@
 import express from 'express'
 import slotConfigController from '../controllers/clinic/slot-config.controller.js'
+import { API_ROUTES } from '../config/serverConfig.js'
 
 const router = express.Router()
 
 // Admin Routes for Slot Configuration
 
 // Clinic Slots
-router.put('/admin/slots/clinic', slotConfigController.updateClinicSlots)
-router.get('/admin/slots/clinic', slotConfigController.getClinicSlots)
+router.put(API_ROUTES.SLOT_CONFIG.CLINIC, slotConfigController.updateClinicSlots)
+router.get(API_ROUTES.SLOT_CONFIG.CLINIC, slotConfigController.getClinicSlots)
 
 // Doctor Slots
-router.put('/admin/slots/doctor/:doctorId', slotConfigController.updateDoctorSlots)
-router.get('/admin/slots/doctor/:doctorId', slotConfigController.getDoctorSlots)
+router.put(API_ROUTES.SLOT_CONFIG.DOCTOR, slotConfigController.updateDoctorSlots)
+router.get(API_ROUTES.SLOT_CONFIG.DOCTOR, slotConfigController.getDoctorSlots)
 
 // Slot Overrides
-router.post('/admin/slots/override', slotConfigController.createOverride)
+router.post(API_ROUTES.SLOT_CONFIG.OVERRIDE, slotConfigController.createOverride)
 
 // Public/Booking Routes
-router.get('/public/slots/available', slotConfigController.getAvailableSlots)
+router.get(API_ROUTES.SLOT_CONFIG.AVAILABLE, slotConfigController.getAvailableSlots)
 
 export default router

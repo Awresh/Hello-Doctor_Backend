@@ -73,6 +73,26 @@ export const createStore = async (req, res) => {
     const tenant = req.tenant;
     const tenantId = tenant.id;
 
+    // --- License Limit Check ---
+    const tenantWithPlan = await Tenant.findByPk(tenantId, {
+        include: [{ model: BusinessType }]
+    });
+
+    if (tenantWithPlan && tenantWithPlan.BusinessType) {
+        const maxStores = tenantWithPlan.customMaxStores !== null ? tenantWithPlan.customMaxStores : (tenantWithPlan.BusinessType.maxStores || 0);
+        if (maxStores > 0) {
+            const currentCount = await Store.count({ where: { tenantId, isActive: true } });
+            if (currentCount >= maxStores) {
+                return sendResponse(res, { 
+                    statusCode: STATUS_CODES.FORBIDDEN, 
+                    success: false, 
+                    message: `Store creation limit reached. Your plan allows a maximum of ${maxStores} stores.` 
+                });
+            }
+        }
+    }
+    // ---------------------------
+
     const existingStore = await Store.findOne({
       where: {
         [Op.or]: [{ name }, { email }]

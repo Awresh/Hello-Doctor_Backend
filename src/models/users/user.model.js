@@ -31,7 +31,7 @@ export const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true,
         validate: {
-            is: /^[0-9]{10,15}$/i
+            is: /^[0-9]{7,15}$/i
         }
     },
     deviceToken: {

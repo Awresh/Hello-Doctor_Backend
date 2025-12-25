@@ -8,7 +8,7 @@ export const verifyToken = async (req, res, next) => {
     if (req.path === '/inventory/stores/login') {
         return next();
     }
-    if (req.path === '/base-route' || req.path === '/sections' || req.path.startsWith('/item') || req.path.startsWith('/section')) {
+    if (req.path === '/base-route' || req.path === '/sections' || req.path==='/auth/unified-login' || req.path.startsWith('/item') || req.path.startsWith('/section')) {
         return next();
     }
 

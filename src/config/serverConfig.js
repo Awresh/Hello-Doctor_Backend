@@ -78,13 +78,22 @@ export const API_ROUTES = {
 
   // Tenant Profile
   TENANT_PROFILE: '/tenant/profile',
+  TENANT_LICENSE_USAGE: '/tenant/license-usage',
 
   // Roles
   ROLES: '/roles',
   ROLE_BY_ID: '/roles/:id',
 
   // Health Check
-  HEALTH: '/health'
+  HEALTH: '/health',
+
+  // Slot Configuration
+  SLOT_CONFIG: {
+    CLINIC: '/admin/slots/clinic',
+    DOCTOR: '/admin/slots/doctor/:doctorId',
+    OVERRIDE: '/admin/slots/override',
+    AVAILABLE: '/public/slots/available'
+  }
 }
 
 // Response Messages

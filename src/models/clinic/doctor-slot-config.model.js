@@ -16,6 +16,23 @@ export const DoctorSlotConfig = sequelize.define('DoctorSlotConfig', {
             key: 'id'
         }
     },
+    numberOfPerSlot: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'numberOfPerSlot'
+    },
+    onlinePatients: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'online_patients'
+    },
+    offlinePatients: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'offline_patients'
+    },
     doctorId: {
         type: DataTypes.INTEGER,
         allowNull: false,

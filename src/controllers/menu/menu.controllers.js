@@ -428,6 +428,31 @@ const getMenuForSidebar = async (req, res) => {
     let finalMenuItems = allMenuItems;
     let finalSections = sections;
 
+    // --- MANUALLY INJECT TIME SLOT IF CLINIC ---
+    if (businessTypeDoc.name.toLowerCase() === 'clinic') {
+        const clinicSection = finalSections.find(s => s.sectionId === 'section-clinic');
+        if (clinicSection) {
+            const hasTimeSlots = finalMenuItems.some(item => item.path === '/clinic/slots');
+            if (!hasTimeSlots) {
+                // Determine order - put it after 'Appointments' if possible, or just append
+                const timeSlotItem = {
+                    id: 'temp-time-slots', // Temporary ID
+                    sectionId: clinicSection.id,
+                    title: 'Time Slots',
+                    icon: 'ti ti-clock',
+                    path: '/clinic/slots',
+                    parentId: null,
+                    order: 99, // Put it at the end
+                    allowedRoles: [],
+                    level: 0,
+                    isActive: true
+                };
+                finalMenuItems.push(timeSlotItem);
+            }
+        }
+    }
+    // -------------------------------------------
+
     if (req.user && req.user.role === 'admin') {
       // Admin gets everything (Business Owner)
       finalMenuItems = allMenuItems;

@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post(API_ROUTES.ROLES, verifyToken, createRole);
 router.get(API_ROUTES.ROLES, verifyToken, getRoles);
-router.put(API_ROUTES.ROLE_BY_ID, verifyToken, updateRole);
+router.patch(API_ROUTES.ROLE_BY_ID, verifyToken, updateRole);
 router.delete(API_ROUTES.ROLE_BY_ID, verifyToken, deleteRole);
 
 export default router;

@@ -15,6 +15,11 @@ export const Role = sequelize.define('Role', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    roleType: {
+        type: DataTypes.ENUM('admin', 'staff', 'doctor'),
+        allowNull: false,
+        defaultValue: 'staff'
+    },
     permissions: {
         type: DataTypes.JSONB,
         defaultValue: []

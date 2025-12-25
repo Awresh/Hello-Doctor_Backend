@@ -84,6 +84,10 @@ export const TenantUser = sequelize.define('TenantUser', {
         type: DataTypes.STRING,
         allowNull: true // Optional for now
     },
+    isDoctor: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
     doctorId: {
         type: DataTypes.INTEGER,
         allowNull: true, // Can be null if we want clinic-wide overrides later, but primarily for doctors

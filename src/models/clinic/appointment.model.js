@@ -48,6 +48,10 @@ export const Appointment = sequelize.define('Appointment', {
         type: DataTypes.ENUM('scheduled', 'confirmed', 'cancelled', 'completed', 'no-show'),
         defaultValue: 'scheduled'
     },
+    type: {
+        type: DataTypes.ENUM('online', 'offline'),
+        defaultValue: 'offline'
+    },
     notes: {
         type: DataTypes.TEXT,
         allowNull: true
