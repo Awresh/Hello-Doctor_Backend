@@ -19,4 +19,10 @@ router.get('/api/appointments/:id', authenticateUser, appointmentController.getA
 // Update appointment status
 router.patch('/api/appointments/:id/status', authenticateUser, appointmentController.updateAppointmentStatus)
 
+// Update appointment details (Generic PUT)
+router.put('/api/appointments/:id', authenticateUser, appointmentController.updateAppointment)
+
+// Reorder appointment (Move down in queue)
+router.post('/api/appointments/:id/reorder', authenticateUser, appointmentController.reorderQueue)
+
 export default router

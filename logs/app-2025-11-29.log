@@ -1,4 +1,0 @@
-{"level":"info","message":"Test info message","testData":"some data","timestamp":"2025-11-29 12:14:32"}
-{"errorDetails":"something went wrong","level":"error","message":"Test error message","timestamp":"2025-11-29 12:14:32"}
-{"level":"info","message":"Test info message","testData":"some data","timestamp":"2025-11-29 12:17:54"}
-{"errorDetails":"something went wrong","level":"error","message":"Test error message","timestamp":"2025-11-29 12:17:54"}

@@ -45,7 +45,7 @@ export const Appointment = sequelize.define('Appointment', {
         field: 'appointment_slot'
     },
     status: {
-        type: DataTypes.ENUM('scheduled', 'confirmed', 'cancelled', 'completed', 'no-show'),
+        type: DataTypes.ENUM('scheduled', 'confirmed', 'cancelled', 'completed', 'no-show', 'processing', 'ongoing', 'visited'),
         defaultValue: 'scheduled'
     },
     type: {
@@ -60,6 +60,30 @@ export const Appointment = sequelize.define('Appointment', {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         field: 'is_active'
+    },
+    source: {
+        type: DataTypes.ENUM('walkin', 'online', 'telecaller'),
+        defaultValue: 'walkin'
+    },
+    startedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'started_at'
+    },
+    completedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'completed_at'
+    },
+    queueOrder: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        field: 'queue_order'
+    },
+    isEmergency: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'is_emergency'
     }
 }, {
     tableName: 'appointments',
