@@ -1,6 +1,7 @@
 import sequelize from '../config/db.config.js';
 import { Tenant } from './tenant/tenant.model.js';
 import { TenantUser } from './tenant/tenent.user.model.js';
+import { DoctorDetails } from './tenant/doctor-details.model.js';
 import { User } from './users/user.model.js';
 import { BusinessType } from './business/business-type.model.js';
 import { Product } from './inventory/product.model.js';
@@ -36,6 +37,10 @@ function setupAssociations() {
   Tenant.hasMany(TenantUser, { foreignKey: 'tenantId' });
   TenantUser.belongsTo(TenantUser, { foreignKey: 'doctorId', as: 'doctor' });
   TenantUser.hasMany(TenantUser, { foreignKey: 'doctorId', as: 'staff' });
+
+  // Doctor Details Association
+  TenantUser.hasOne(DoctorDetails, { foreignKey: 'tenantUserId', as: 'doctorDetails' });
+  DoctorDetails.belongsTo(TenantUser, { foreignKey: 'tenantUserId' });
 
   // Product associations - SAAS Product relationships
   Product.belongsTo(Tenant, { foreignKey: 'tenantId' });
@@ -157,6 +162,7 @@ export {
   sequelize,
   Tenant,
   TenantUser,
+  DoctorDetails,
   User,
   Admin,
   BusinessType,

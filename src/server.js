@@ -37,6 +37,19 @@ app.use(slotConfigRouter);
 app.use(tenantUserRouter);
 app.use(roleRouter);
 app.use(tenantRouter);
+import uploadRouter from './routes/upload.routes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ... existing imports ...
+
+// Static file serving
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+app.use(uploadRouter);
 app.use(appointmentRouter);
 // app.use('/api', routes);
 app.use(errorMiddleware);

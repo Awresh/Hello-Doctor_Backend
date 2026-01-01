@@ -80,6 +80,10 @@ export const TenantUser = sequelize.define('TenantUser', {
             isEmail: true
         }
     },
+    phone: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     password: {
         type: DataTypes.STRING,
         allowNull: true // Optional for now

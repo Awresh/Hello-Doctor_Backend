@@ -15,6 +15,10 @@ export const Role = sequelize.define('Role', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    phone: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     roleType: {
         type: DataTypes.ENUM('admin', 'staff', 'doctor'),
         allowNull: false,

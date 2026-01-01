@@ -1,5 +1,6 @@
-import { TenantUser } from "../../models/tenant/tenent.user.model.js";
-import { Tenant, BusinessType, Role } from "../../models/index.js";
+
+
+import { TenantUser, Tenant, BusinessType, Role, DoctorDetails } from "../../models/index.js";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
 import { MESSAGES } from "../../config/serverConfig.js";
@@ -25,10 +26,10 @@ export const createTenantUser = async (req, res) => {
             });
         }
 
-        const { name, role, email, password, permissions, about, description, experience, speciality, doctorId } = req.body;
+        const { name, role, email, phone, password, permissions, about, description, experience, speciality, doctorId, doctorDetails } = req.body;
 
         // Log the payload for debugging if needed
-        // console.log("Creating TenantUser Payload:", { name, role, email, hasPassword: !!password, permissionsCount: permissions?.length });
+        // console.log("Creating TenantUser Payload:", { name, role, email, phone, hasPassword: !!password, permissionsCount: permissions?.length });
 
         if (!name || !role) {
             return sendResponse(res, {
@@ -112,7 +113,10 @@ export const createTenantUser = async (req, res) => {
         const tenantUser = await TenantUser.create({
             name,
             role,
+            name,
+            role,
             email,
+            phone,
             password, // Password hashing is handled by BeforeSave hook in model
             permissions: permissions || [], // Default to empty array if not provided
             about,
@@ -124,10 +128,23 @@ export const createTenantUser = async (req, res) => {
             isDoctor // Set flag
         });
 
+        // Create Doctor Details if provided and is doctor
+        if (isDoctor && doctorDetails) {
+            await DoctorDetails.create({
+                tenantUserId: tenantUser.id,
+                ...doctorDetails
+            });
+        }
+
+        // Fetch created user with details for response
+        const createdUser = await TenantUser.findByPk(tenantUser.id, {
+             include: [{ model: DoctorDetails, as: 'doctorDetails' }]
+        });
+
         return sendResponse(res, {
             statusCode: STATUS_CODES.CREATED,
             message: "Tenant user created successfully",
-            data: tenantUser
+            data: createdUser
         });
     } catch (error) {
         console.error('Create Tenant User Error:', error);
@@ -152,7 +169,8 @@ export const getAllTenantUsers = async (req, res) => {
         }
 
         const users = await TenantUser.findAll({
-            where: { tenantId }
+            where: { tenantId },
+            include: [{ model: DoctorDetails, as: 'doctorDetails' }]
         });
 
         return sendResponse(res, {
@@ -183,7 +201,8 @@ export const getTenantUserById = async (req, res) => {
 
         const { id } = req.params;
         const user = await TenantUser.findOne({
-            where: { id, tenantId }
+            where: { id, tenantId },
+            include: [{ model: DoctorDetails, as: 'doctorDetails' }]
         });
 
         if (!user) {
@@ -221,10 +240,11 @@ export const updateTenantUser = async (req, res) => {
         }
 
         const { id } = req.params;
-        const { name, role, email, password, permissions, about, description, experience, speciality, doctorId } = req.body;
+        const { name, role, email, phone, password, permissions, about, description, experience, speciality, doctorId, doctorDetails } = req.body;
 
         const user = await TenantUser.findOne({
-            where: { id, tenantId }
+            where: { id, tenantId },
+            include: [{ model: DoctorDetails, as: 'doctorDetails' }] // Include to check existence
         });
 
         if (!user) {
@@ -239,6 +259,7 @@ export const updateTenantUser = async (req, res) => {
             name,
             role,
             email,
+            phone,
             permissions,
             about,
             description,
@@ -250,17 +271,33 @@ export const updateTenantUser = async (req, res) => {
         // Only update password if provided and not empty
         if (password && password.trim() !== '') {
             updateData.password = password;
-            // IMPORTANT: Sequelize hook 'beforeSave' includes 'beforeUpdate' which runs on save(). 
-            // However, `update()` method should also trigger hooks if individualHooks: true is set, or beforeSave/beforeUpdate are set up correctly. 
-            // The model uses `beforeSave`. Let's ensure it catches this.
         }
 
         // Using user.update instance method usually triggers hooks
         await user.update(updateData);
 
+        // Update Doctor Details if provided
+        if (doctorDetails) {
+            if (user.doctorDetails) {
+                // Update existing
+                await user.doctorDetails.update(doctorDetails);
+            } else {
+                // Create new
+                await DoctorDetails.create({
+                    tenantUserId: user.id,
+                    ...doctorDetails
+                });
+            }
+        }
+
+        // Re-fetch updated user
+         const updatedUser = await TenantUser.findByPk(id, {
+            include: [{ model: DoctorDetails, as: 'doctorDetails' }]
+        });
+
         return sendResponse(res, {
             message: "Tenant user updated successfully",
-            data: user
+            data: updatedUser
         });
     } catch (error) {
         console.error('Update Tenant User Error:', error);
