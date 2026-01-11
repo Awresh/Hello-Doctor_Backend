@@ -37,6 +37,7 @@ import { Role } from './tenant/role.model.js';
 import { Notification } from './notification/notification.model.js';
 import { TimeSettings } from './settings/time-settings.model.js';
 import { SpecialHoliday } from './settings/special-holiday.model.js';
+import { CallHistory } from './tenant/call-history.model.js';
 
 // Define associations after all models are loaded
 function setupAssociations() {
@@ -49,6 +50,12 @@ function setupAssociations() {
   Tenant.hasMany(TenantUser, { foreignKey: 'tenantId' });
   TenantUser.belongsTo(TenantUser, { foreignKey: 'doctorId', as: 'doctor' });
   TenantUser.hasMany(TenantUser, { foreignKey: 'doctorId', as: 'staff' });
+
+  // Call History Associations
+  CallHistory.belongsTo(TenantUser, { as: 'caller', foreignKey: 'callerId' });
+  CallHistory.belongsTo(TenantUser, { as: 'receiver', foreignKey: 'receiverId' });
+  TenantUser.hasMany(CallHistory, { as: 'outgoingCalls', foreignKey: 'callerId' });
+  TenantUser.hasMany(CallHistory, { as: 'incomingCalls', foreignKey: 'receiverId' });
 
   // Doctor Details Association
   TenantUser.hasOne(DoctorDetails, { foreignKey: 'tenantUserId', as: 'doctorDetails' });
@@ -261,5 +268,6 @@ export {
   TimeSettings,
   SpecialHoliday,
   Prescription,
+  CallHistory,
   setupAssociations
 };

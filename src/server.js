@@ -70,6 +70,8 @@ app.use(uploadRouter);
 app.use(appointmentRouter);
 app.use(notificationRouter);
 app.use(prescriptionRouter);
+import callRouter from './routes/call.routes.js';
+app.use('/api/calls', callRouter);
 // app.use('/api', routes);
 app.use(errorMiddleware);
 
