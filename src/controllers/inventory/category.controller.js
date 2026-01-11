@@ -11,7 +11,11 @@ export const getAllCategories = async (req, res) => {
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const storeData = req.store;
-    let whereClause = { tenantId, isActive: true };
+    let whereClause = {
+      tenantId,
+      isActive: true,
+      type: 'Product' // Filter to show only Product Categories
+    };
     if (storeData) {
       whereClause = {
         tenantId,
@@ -26,12 +30,12 @@ export const getAllCategories = async (req, res) => {
     const categories = await Category.findAll({
       where: whereClause,
       include: [{
-        model:Category,
+        model: Category,
         as: 'parentCategory',
         attributes: ['name']
       }]
     });
-    
+
     const response = categories ? categories.map((category) => {
       const categoryObj = category.toJSON();
       return {
@@ -42,7 +46,7 @@ export const getAllCategories = async (req, res) => {
         showAction_Toggle: storeData ? (categoryObj.storeId === storeData.id) : true,
       };
     }) : [];
-    
+
     return sendResponse(res, {
       message: "Categories fetched successfully",
       data: response,
@@ -91,7 +95,7 @@ export const createCategory = async (req, res) => {
     const tenant = req.tenant;
     const tenantId = getJsonValue(tenant, 'id');
     const storeData = req.store
-    const existingCategory = await Category.findOne({ where: { name } });
+    const existingCategory = await Category.findOne({ where: { name, tenantId } });
     // console.log(existingCategory);
     if (existingCategory) {
       return sendResponse(res, {
@@ -127,7 +131,7 @@ export const createCategory = async (req, res) => {
       category = new Category({ name, description, parentCategoryId: parentCategory || null, tenantId });
     }
     await category.save();
-    
+
     // Fetch newly created category with parent included
     const fetchedCategory = await Category.findByPk(category.id, {
       include: [{
@@ -143,7 +147,7 @@ export const createCategory = async (req, res) => {
         message: 'Category not found'
       };
     }
-    
+
     const getCat = fetchedCategory.toJSON();
 
     const response = {
@@ -160,7 +164,7 @@ export const createCategory = async (req, res) => {
       data: response,
     });
   } catch (error) {
-   console.log(error);
+    console.log(error);
     return sendResponse(res, {
       statusCode: STATUS_CODES.INTERNAL_SERVER_ERROR,
       success: false,
@@ -203,10 +207,23 @@ export const updateCategory = async (req, res) => {
       });
     }
 
-    await category.update({ 
-      name, 
-      description, 
-      parentCategoryId: parentCategory || null 
+    // Permission Check: Store users can only edit their own categories
+    const storeData = req.store;
+    if (storeData) {
+        // If category is Global (storeId is null) OR belongs to another store
+        if (!category.storeId || category.storeId != storeData.id) {
+            return sendResponse(res, {
+                statusCode: STATUS_CODES.FORBIDDEN,
+                success: false,
+                message: "You do not have permission to edit this category",
+            });
+        }
+    }
+
+    await category.update({
+      name,
+      description,
+      parentCategoryId: parentCategory || null
     });
 
     const fetchedCategory = await Category.findByPk(id, {
@@ -259,6 +276,18 @@ export const deleteCategory = async (req, res) => {
         success: false,
         message: "Category not found",
       });
+    }
+
+    // Permission Check: Store users can only delete their own categories
+    const storeData = req.store;
+    if (storeData) {
+        if (!category.storeId || category.storeId != storeData.id) {
+            return sendResponse(res, {
+                statusCode: STATUS_CODES.FORBIDDEN,
+                success: false,
+                message: "You do not have permission to delete this category",
+            });
+        }
     }
 
     await category.update({ isActive: false });

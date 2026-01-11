@@ -1,5 +1,6 @@
 import { SalesBill } from "../../models/inventory/sales-bill.model.js";
 import { Product } from "../../models/inventory/product.model.js";
+import { Store } from "../../models/inventory/store.model.js";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
 import { MESSAGES } from "../../config/serverConfig.js";
@@ -106,6 +107,7 @@ export const getAllSalesBills = async (req, res) => {
         const bills = await SalesBill.findAll({
             where: query,
             order: [['createdAt', 'DESC']],
+            include: [{ model: Store }] // Populates store details
             // include: [{ model: Product, as: 'items.product' }] // Sequelize doesn't support deep include on JSON items easily without proper associations.
             // Items are likely stored as JSON in SalesBill, so no need to include Product unless we strictly need it.
             // Original code: populate('items.productId').

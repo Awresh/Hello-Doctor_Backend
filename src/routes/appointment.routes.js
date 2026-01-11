@@ -25,4 +25,7 @@ router.put('/api/appointments/:id', authenticateUser, appointmentController.upda
 // Reorder appointment (Move down in queue)
 router.post('/api/appointments/:id/reorder', authenticateUser, appointmentController.reorderQueue)
 
+// Search Patients
+router.get('/clinic/patients', authenticateUser, appointmentController.searchPatients)
+
 export default router

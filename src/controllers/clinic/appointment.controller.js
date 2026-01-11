@@ -1,6 +1,7 @@
 import { Appointment, Tenant, User, TenantUser, ClinicSlotConfig, DoctorSlotConfig, SlotOverride } from "../../models/index.js"
 import { getIO } from '../../socket.js';
 import { sendResponse } from "../../utils/response.util.js"
+import { createNotificationHelper } from '../notification/notification.controller.js';
 import { STATUS_CODES } from "../../config/statusCodes.js"
 import { Op } from "sequelize"
 
@@ -12,7 +13,8 @@ export const createAppointment = async (req, res) => {
     try {
         const { doctorId, notes, type = 'offline', source = 'walkin', isEmergency = false } = req.body
         const appointmentDate = req.body.appointmentDate || req.body.date
-        const appointmentSlot = req.body.appointmentSlot || req.body.slot
+        let appointmentSlot = req.body.appointmentSlot || req.body.slot
+        const manualTime = req.body.manualTime
         let { userId, name, mobile, address, email, age, gender } = req.body
         const tenantId = req.tenant.id;
 
@@ -28,13 +30,18 @@ export const createAppointment = async (req, res) => {
             })
         }
 
-        if (!doctorId || !appointmentDate || !appointmentSlot) {
+        if (!doctorId || !appointmentDate || (!appointmentSlot && !manualTime)) {
             await transaction.rollback();
             return sendResponse(res, {
                 statusCode: STATUS_CODES.BAD_REQUEST,
                 success: false,
                 message: 'Doctor ID, Date, and Slot are required.'
             })
+        }
+
+        // Use manualTime as slot for emergency
+        if (isEmergency && !appointmentSlot && manualTime) {
+            appointmentSlot = manualTime;
         }
 
         // 1. Handle User Creation if userId is not provided
@@ -135,13 +142,13 @@ export const createAppointment = async (req, res) => {
             }
         }
 
-        // 3. Find the specific slot
-        const slotMatch = availableSlots.find(s => {
+        // 3. Find the specific slot (Bypass for emergency)
+        const slotMatch = isEmergency ? { startTime: appointmentSlot, maxPatients: 999 } : availableSlots.find(s => {
             if (typeof s === 'string') return s === appointmentSlot;
             return s.startTime === appointmentSlot;
         });
 
-        if (!slotMatch) {
+        if (!slotMatch && !isEmergency) {
             await transaction.rollback();
             return sendResponse(res, {
                 statusCode: STATUS_CODES.BAD_REQUEST,
@@ -167,7 +174,7 @@ export const createAppointment = async (req, res) => {
             maxPatients = slotMatch.maxPatients || defaultMaxPatients;
         }
 
-        if (appointmentCount >= maxPatients) {
+        if (appointmentCount >= maxPatients && !isEmergency) {
             await transaction.rollback();
             return sendResponse(res, {
                 statusCode: STATUS_CODES.BAD_REQUEST,
@@ -233,11 +240,56 @@ export const createAppointment = async (req, res) => {
 
         await transaction.commit();
 
-        // Emit Socket Event
+        // Emit Socket Event with Doctor Name
         try {
-            getIO().emit('appointment:update', { action: 'create', appointment });
+            // Fetch Doctor Name for Notification
+            const doctorUser = await TenantUser.findByPk(doctorId, { attributes: ['name'] });
+            const doctorName = doctorUser ? doctorUser.name : 'Unknown Doctor';
+
+            getIO().emit('appointment:update', {
+                action: 'create',
+                appointment,
+                doctorName,
+                patientName: name
+            });
+
+            // --- PERSISTENT NOTIFICATIONS ---
+            const message = `New appointment for Dr. ${doctorName} with patient ${name} on ${appointmentDate} at ${appointmentSlot}`;
+
+            // 1. Notify Doctor (if not self-booked)
+            // Even if self booked, maybe useful? Let's skip if currentUser.id === doctorId? 
+            // req.user might not be populated well here relying on req.tenant. 
+            // Let's just create it.
+            await createNotificationHelper({
+                tenantId,
+                userId: doctorId,
+                title: 'New Appointment',
+                message,
+                type: 'info',
+                metadata: { appointmentId: appointment.id }
+            });
+
+            // 2. Notify Admins (Fan-out or Role based?)
+            // We used 'role' field in model. Let's create one generic 'admin' notification
+            // Or if we want individual read status for every admin, we need to find all admins.
+            // For now, let's create a notification with role='admin'
+            // My getNotifications logic checks `[Op.or]: [{userId}, {role: 'admin'}]`
+            // So one record is enough for all admins to SEE it. 
+            // BUT they will share 'isRead' status if we use one record. 
+            // Simpler approach for this system: Shared read status for admin group is acceptable OR 
+            // just let admins see the doctor notification in a "All Activity" view.
+            // Let's Add a specific Admin Notification. 
+            await createNotificationHelper({
+                tenantId,
+                role: 'admin',
+                title: 'New Appointment',
+                message,
+                type: 'info',
+                metadata: { appointmentId: appointment.id }
+            });
+
         } catch (err) {
-            console.error("Socket emit failed", err);
+            console.error("Notification/Socket failed", err);
         }
 
         return sendResponse(res, {
@@ -265,6 +317,8 @@ export const getAppointments = async (req, res) => {
         const { doctorId, userId, date, status } = req.query
         const tenantId = req.tenant.id;
         const currentUser = req.user; // From verifyToken
+        console.log("Get Appointments Query:", req.query);
+
 
         const where = { tenantId }
 
@@ -733,13 +787,54 @@ export const reorderQueue = async (req, res) => {
     }
 }
 
+/**
+ * Search patients (Users) by name or mobile
+ */
+export const searchPatients = async (req, res) => {
+    try {
+        const { search } = req.query;
+        // Don't enforce tenant link for Users yet, as they are global or soft-linked.
+        // But we might want to return only those who have appointments with this tenant?
+        // For now, simple search is better for new patients.
+
+        if (!search) {
+            return sendResponse(res, {
+                message: 'Patients fetched successfully',
+                data: []
+            });
+        }
+
+        const users = await User.findAll({
+            where: {
+                [Op.or]: [
+                    { name: { [Op.iLike]: `%${search}%` } },
+                    { mobile: { [Op.iLike]: `%${search}%` } }
+                ]
+            },
+            limit: 20
+        });
+
+        return sendResponse(res, {
+            message: 'Patients fetched successfully',
+            data: users
+        });
+    } catch (error) {
+        console.error('Search Patients Error:', error);
+        return sendResponse(res, {
+            statusCode: STATUS_CODES.INTERNAL_SERVER_ERROR,
+            success: false,
+            message: 'Failed to search patients'
+        });
+    }
+}
+
 export default {
     createAppointment,
     getAppointments,
     getAppointmentById,
-    getAppointmentById,
     updateAppointmentStatus,
     updateAppointment,
     getAvailableSlots,
-    reorderQueue
+    reorderQueue,
+    searchPatients
 }

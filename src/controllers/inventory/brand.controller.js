@@ -156,6 +156,18 @@ export const updateBrand = async (req, res) => {
       });
     }
 
+    // Permission Check
+    const storeData = req.store;
+    if (storeData) {
+        if (!brand.storeId || brand.storeId != storeData.id) {
+            return sendResponse(res, {
+                statusCode: STATUS_CODES.FORBIDDEN,
+                success: false,
+                message: "You do not have permission to edit this brand",
+            });
+        }
+    }
+
     await brand.update({ name, logo });
 
     const getBrand = brand.toJSON();
@@ -193,6 +205,18 @@ export const deleteBrand = async (req, res) => {
         success: false,
         message: "Brand not found",
       });
+    }
+
+    // Permission Check
+    const storeData = req.store;
+    if (storeData) {
+        if (!brand.storeId || brand.storeId != storeData.id) {
+            return sendResponse(res, {
+                statusCode: STATUS_CODES.FORBIDDEN,
+                success: false,
+                message: "You do not have permission to delete this brand",
+            });
+        }
     }
 
     await brand.update({ isActive: false });

@@ -80,6 +80,10 @@ export const API_ROUTES = {
   TENANT_PROFILE: '/tenant/profile',
   TENANT_LICENSE_USAGE: '/tenant/license-usage',
 
+  // Payment Modes
+  PAYMENT_MODES: '/tenant/payment-modes',
+  PAYMENT_MODE_BY_ID: '/tenant/payment-modes/:id',
+
   // Roles
   ROLES: '/roles',
   ROLE_BY_ID: '/roles/:id',

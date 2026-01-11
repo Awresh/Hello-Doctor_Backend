@@ -3,6 +3,7 @@ import { MESSAGES } from "../../config/serverConfig.js";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
 import { Op } from "sequelize";
+import { logDebug } from "../../utils/WebUtils.js";
 
 // Get all products
 export const getAllProducts = async (req, res) => {
@@ -11,26 +12,21 @@ export const getAllProducts = async (req, res) => {
         const tenantId = tenant.id;
         const storeData = req.store;
 
-        let whereClause = { tenantId};
-        let storeFilter = null;
-
-        // If logged in as a store, filter by store allocations
-        if (storeData) {
-            storeFilter = {
-                storeAllocations: {
-                    [Op.contains]: [{ storeId: storeData.id, isActive: true }]
-                }
-            };
-            whereClause = { ...whereClause, ...storeFilter };
-        }
+        let whereClause = {
+            tenantId,
+            type: 'Product' // Filter to show only Products, not Services
+        };
+        // logDebug("storeData",storeData)
+        // Removed DB-side JSONB filtering to assume app-side filtering for robustness
+        // storeFilter logic removed.
 
         const products = await Product.findAll({
             where: whereClause,
             include: [
-                { model: Category,as: 'category', attributes: ['name','id'] },
-                { model: Brand,as: 'brand', attributes: ['name','id'] },
-                { model: Unit,as: 'unit', attributes: ['name','id'] },
-                { model: Supplier,as: 'supplier', attributes: ['name','id'] }
+                { model: Category, as: 'category', attributes: ['name', 'id'] },
+                { model: Brand, as: 'brand', attributes: ['name', 'id'] },
+                { model: Unit, as: 'unit', attributes: ['name', 'id'] },
+                { model: Supplier, as: 'supplier', attributes: ['name', 'id'] }
             ]
         });
 
@@ -40,7 +36,7 @@ export const getAllProducts = async (req, res) => {
                 const productObj = product.toJSON();
 
                 // Calculate total stock
-                const distributedStock = Array.isArray(productObj.storeAllocations) 
+                const distributedStock = Array.isArray(productObj.storeAllocations)
                     ? productObj.storeAllocations.reduce((acc, curr) => acc + (curr.stock || 0), 0)
                     : 0;
                 productObj.totalStock = (productObj.globalStock || 0) + distributedStock;
@@ -48,15 +44,16 @@ export const getAllProducts = async (req, res) => {
                 // Customize view for Store
                 if (storeData) {
                     const allocation = productObj.storeAllocations?.find(
-                        sa => sa.storeId === storeData.id && sa.isActive
+                        sa => (sa.storeId == storeData.id) 
                     );
 
                     if (allocation) {
-                        productObj.stock = allocation.stock;
+                        productObj.stock = allocation.stock || 0;
+                        const isStoreProduct = product.storeId == storeData.id;
                         if (allocation.sellingPrice) {
-                            productObj.sellingPrice = allocation.sellingPrice;
+                            productObj.sellingPrice = allocation.sellingPrice || 0;
                         }
-                        
+
                         const storeMinStock = allocation.minStock || productObj.minStock || 10;
                         if (allocation.stock <= 0) {
                             productObj.stockStatus = 'Out of Stock';
@@ -68,9 +65,21 @@ export const getAllProducts = async (req, res) => {
 
                         delete productObj.storeAllocations;
                         delete productObj.globalStock;
+                        
+                        return {
+                            ...productObj,
+                            showAction_Edit: isStoreProduct,
+                            showAction_View: isStoreProduct,
+                            showAction_Delete: isStoreProduct,
+                            showAction_Toggle: isStoreProduct,
+                        };
+                    } else {
+                        // Product not allocated to this store
+                        return null; 
                     }
                 }
 
+                // Admin View
                 return {
                     ...productObj,
                     showAction_Edit: true,
@@ -78,7 +87,7 @@ export const getAllProducts = async (req, res) => {
                     showAction_Delete: true,
                     showAction_Toggle: true,
                 };
-            });
+            }).filter(item => item !== null); // Filter out nulls (non-allocated products)
         }
 
         return sendResponse(res, {
@@ -132,13 +141,13 @@ export const getProductById = async (req, res) => {
 // Create new product
 export const createProduct = async (req, res) => {
     try {
-        let { name, categoryId, brandId, unitId, supplierId,isActive, buyPrice, sellingPrice, sku, status, globalStock, storeAllocations, stock=0, minStock } = req.body;
+        let { name, categoryId, brandId, unitId, supplierId, isActive, buyPrice, sellingPrice, sku, status, globalStock, storeAllocations, stock = 0, minStock, gstRate, gstType } = req.body;
         const tenant = req.tenant;
         const tenantId = tenant.id;
         const storeData = req.store;
         const storeId = storeData?.id;
 
-        if(storeData){
+        if (storeData) {
             storeAllocations = [{
                 storeId,
                 stock: stock == 0 ? globalStock : stock,
@@ -152,7 +161,7 @@ export const createProduct = async (req, res) => {
         let stockStatus = 'In Stock';
         const currentStock = storeData ? (stock || 0) : (globalStock || 0);
         const currentMinStock = minStock || 10;
-        
+
         if (currentStock <= 0) {
             stockStatus = 'Out of Stock';
         } else if (currentStock <= currentMinStock) {
@@ -172,7 +181,10 @@ export const createProduct = async (req, res) => {
             minStock,
             sku,
             status,
+            storeId,
             stockStatus,
+            gstRate,
+            gstType,
             globalStock: globalStock || 0,
             storeAllocations: storeAllocations || []
         });

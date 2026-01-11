@@ -4,6 +4,7 @@ import { MESSAGES } from '../../config/serverConfig.js';
 import { sendResponse } from '../../utils/response.util.js';
 import { STATUS_CODES } from '../../config/statusCodes.js';
 import { Op } from 'sequelize';
+import { logDebug } from '../../utils/WebUtils.js';
 
 // ============================================
 // BASE ROUTE MANAGEMENT
@@ -368,11 +369,14 @@ const getMenuForSidebar = async (req, res) => {
     let { userRole = null } = req.query;
     const tenant = req.tenant;
     const businessTypeId = tenant.businessTypeId;
-    let allowedMenuItemIds = null;
-
-    if (req.store) {
-      allowedMenuItemIds = req.store.permissions || [];
-    }
+    // let allowedMenuItemIds = null;
+    // logDebug('businessTypeId', businessTypeId);
+    // logDebug('req.store', req.store);
+    // // logDebug('req.store.permissions', req.store.permissions);
+    // logDebug('tenant', tenant);
+    // if (req.store) {
+    //   allowedMenuItemIds = req.store.permissions || [];
+    // }
 
     const businessTypeDoc = await BusinessType.findByPk(businessTypeId);
     if (!businessTypeDoc) {
@@ -415,9 +419,7 @@ const getMenuForSidebar = async (req, res) => {
     };
 
     // Store Permission Filter (ID based)
-    if (req.store && req.store.permissions && req.store.permissions.length > 0) {
-      whereItems.id = { [Op.in]: req.store.permissions };
-    }
+
 
     const allMenuItems = await MenuItem.findAll({
       where: whereItems,
@@ -429,38 +431,87 @@ const getMenuForSidebar = async (req, res) => {
     let finalSections = sections;
 
     // --- MANUALLY INJECT TIME SLOT IF CLINIC ---
-    if (businessTypeDoc.name.toLowerCase() === 'clinic') {
-        const clinicSection = finalSections.find(s => s.sectionId === 'section-clinic');
-        if (clinicSection) {
-            const hasTimeSlots = finalMenuItems.some(item => item.path === '/clinic/slots');
-            if (!hasTimeSlots) {
-                // Determine order - put it after 'Appointments' if possible, or just append
-                const timeSlotItem = {
-                    id: 'temp-time-slots', // Temporary ID
-                    sectionId: clinicSection.id,
-                    title: 'Time Slots',
-                    icon: 'ti ti-clock',
-                    path: '/clinic/slots',
-                    parentId: null,
-                    order: 99, // Put it at the end
-                    allowedRoles: [],
-                    level: 0,
-                    isActive: true
-                };
-                finalMenuItems.push(timeSlotItem);
-            }
-        }
-    }
+    // if (businessTypeDoc.name.toLowerCase() === 'clinic') {
+    //   const clinicSection = finalSections.find(s => s.sectionId === 'section-clinic');
+    //   if (clinicSection) {
+    //     const hasTimeSlots = finalMenuItems.some(item => item.path === '/clinic/slots');
+    //     if (!hasTimeSlots) {
+    //       // Determine order - put it after 'Appointments' if possible, or just append
+    //       const timeSlotItem = {
+    //         id: 'temp-time-slots', // Temporary ID
+    //         sectionId: clinicSection.id,
+    //         title: 'Time Slots',
+    //         icon: 'ti ti-clock',
+    //         path: '/clinic/slots',
+    //         parentId: null,
+    //         order: 99, // Put it at the end
+    //         allowedRoles: [],
+    //         level: 0,
+    //         isActive: true
+    //       };
+    //       finalMenuItems.push(timeSlotItem);
+    //     }
+    //   }
+    // }
     // -------------------------------------------
 
-    if (req.user && req.user.role === 'admin') {
+    // --- MANUALLY INJECT SERVICES IF PHARMACY ---
+    // if (businessTypeDoc.name.toLowerCase() === 'pharmacy' || businessTypeDoc.name.toLowerCase() === 'medical-store') {
+    //   const pharmacySection = finalSections.find(s => s.sectionId === 'section-pharmacy');
+
+    //   if (pharmacySection) {
+    //     const hasServices = finalMenuItems.some(item => item.path === '/pharmacy/services');
+    //     if (!hasServices) {
+
+    //       // Determine order - put it after 'Sales Returns'
+    //       const returnsItem = finalMenuItems.find(item => item.path === '/pharmacy/sales/returns');
+    //       const order = returnsItem ? returnsItem.order + 1 : 20;
+
+    //       const servicesItem = {
+    //         id: 'temp-services', // Temporary ID
+    //         sectionId: pharmacySection.id,
+    //         title: 'Services',
+    //         icon: 'ti ti-stethoscope', // Or suitable icon
+    //         path: '/pharmacy/services',
+    //         parentId: null,
+    //         order: order,
+    //         allowedRoles: [],
+    //         level: 0,
+    //         isActive: true
+    //       };
+    //       finalMenuItems.push(servicesItem);
+    //       // Re-sort items by order since we pushed a new one
+    //       finalMenuItems.sort((a, b) => a.order - b.order);
+    //     }
+    //   }
+    // }
+
+    // --- MANUALLY INJECT SERVICES IF INVENTORY ---
+    // (Removed as moved to Pharmacy)
+    // -------------------------------------------
+
+    // Unified Permission Filter
+    let permissions = null;
+    let isAdmin = false;
+
+    if (req.user) {
+      if (req.user.role === 'admin') {
+        isAdmin = true;
+      } else {
+        permissions = req.user.permissions;
+      }
+    } else if (req.store) {
+      permissions = req.store.permissions;
+    }
+
+    if (isAdmin) {
       // Admin gets everything (Business Owner)
       finalMenuItems = allMenuItems;
       finalSections = sections;
-    } else if (req.user && req.user.permissions) {
+    } else if (permissions && permissions.length > 0) {
       // 1. Filter Sections
       finalSections = sections.filter(section => {
-        const perm = req.user.permissions.find(p => p.key === section.sectionId);
+        const perm = permissions.find(p => p.key === section.sectionId);
         return perm && perm.access;
       });
 
@@ -473,7 +524,7 @@ const getMenuForSidebar = async (req, res) => {
 
         // Find section permission
         const section = finalSections.find(s => s.id === item.sectionId);
-        const sectionPerm = req.user.permissions.find(p => p.key === section.sectionId);
+        const sectionPerm = permissions.find(p => p.key === section.sectionId);
 
         if (!sectionPerm) return false;
 
@@ -490,8 +541,26 @@ const getMenuForSidebar = async (req, res) => {
 
         return tabPerm && tabPerm.access;
       });
-    } else if (req.store) {
-      // Filter (already done via SQL ID check)
+    } else {
+       // If not admin and no permissions, possibly empty?
+       // For now, if no permissions match above, it falls through with initialized finalMenuItems = allMenuItems
+       // BUT we should restrict it if they are supposed to have permissions but array is empty.
+       // However, to correspond to original logic:
+       // Original logic: "else if (req.store) { // Filter (already done via SQL ID check) }"
+       // But SQL check was commented out/removed.
+       // If 'permissions' is undefined (e.g. no req.user or req.store), we might default to empty or all?
+       // The original code initialized `finalMenuItems = allMenuItems` at line 441.
+       // If `isAdmin` is false and `permissions` is empty/null, it keeps `allMenuItems`.
+       // This seems risky if unauthorized.
+       // But assuming `authenticateUser` middleware is used, one of `req.user`, `req.store`, or `req.admin` (not handled here?) exists.
+       // The strict logic should probably default to empty if not admin and not permitted.
+       
+       if (!isAdmin && (req.user || req.store)) {
+           finalMenuItems = [];
+           finalSections = [];
+       }
+
+
     }
 
     // 3. Organise items into a hierarchy in-memory (Use filtered lists)
@@ -506,10 +575,18 @@ const getMenuForSidebar = async (req, res) => {
         }
       }
 
+      // --- RENAME LOGIC ---
+      let itemTitle = item.title;
+      if (itemTitle === 'Appointment' || itemTitle === 'Appointments') {
+        itemTitle = 'Appointments';
+      }
+      // --------------------
+
       const itemData = {
         id: item.id.toString(),
         icon: item.icon,
-        label: item.title,
+        label: itemTitle,
+        originalTitle: item.title, // Pass original title for permission checks
         path: item.path
       };
 

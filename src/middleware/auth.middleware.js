@@ -136,3 +136,14 @@ export const verifyToken = async (req, res, next) => {
         });
     }
 };
+
+export const requireAdmin = (req, res, next) => {
+    if (!req.admin) {
+        return sendResponse(res, {
+            statusCode: STATUS_CODES.FORBIDDEN,
+            success: false,
+            message: 'Access denied. Admin privileges required.'
+        });
+    }
+    next();
+};

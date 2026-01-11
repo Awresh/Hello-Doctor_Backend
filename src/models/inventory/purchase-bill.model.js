@@ -1,4 +1,4 @@
-import { DataTypes } from 'sequelize';
+import { DataTypes, Op } from 'sequelize';
 import sequelize from '../../config/db.config.js';
 
 export const PurchaseBill = sequelize.define('PurchaseBill', {
@@ -78,10 +78,16 @@ export const PurchaseBill = sequelize.define('PurchaseBill', {
   hooks: {
     beforeSave: async (bill) => {
       if (!bill.billNumber) {
-        const lastBill = await PurchaseBill.findOne({
-          where: { tenantId: bill.tenantId },
-          order: [['createdAt', 'DESC']]
+        console.log('Generating bill number for tenant:', bill.tenantId);
+        const lastBill = await bill.constructor.findOne({
+          where: { 
+            tenantId: bill.tenantId,
+            billNumber: { [Op.like]: 'PB-%' }
+          },
+          order: [['billNumber', 'DESC']]
         });
+        
+        console.log('Last bill found:', lastBill?.billNumber);
 
         let nextNumber = 1;
         if (lastBill && lastBill.billNumber) {
@@ -92,6 +98,7 @@ export const PurchaseBill = sequelize.define('PurchaseBill', {
         }
 
         bill.billNumber = `PB-${String(nextNumber).padStart(6, '0')}`;
+        console.log('Generated new bill number:', bill.billNumber);
       }
     }
   },

@@ -16,6 +16,7 @@ router.get(API_ROUTES.SLOT_CONFIG.DOCTOR, slotConfigController.getDoctorSlots)
 
 // Slot Overrides
 router.post(API_ROUTES.SLOT_CONFIG.OVERRIDE, slotConfigController.createOverride)
+router.delete(API_ROUTES.SLOT_CONFIG.OVERRIDE, slotConfigController.deleteOverride)
 
 // Public/Booking Routes
 router.get(API_ROUTES.SLOT_CONFIG.AVAILABLE, slotConfigController.getAvailableSlots)

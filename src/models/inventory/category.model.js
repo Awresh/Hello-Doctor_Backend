@@ -42,6 +42,10 @@ export const Category = sequelize.define('Category', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  type: {
+    type: DataTypes.ENUM('Product', 'Service'),
+    defaultValue: 'Product'
   }
 }, {
   tableName: 'categories',

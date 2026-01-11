@@ -146,7 +146,7 @@ export const loginStore = async (req, res) => {
           model: Tenant,
           include: [{
             model: BusinessType,
-            attributes: ['name']
+            attributes: ['name','id']
           }]
         }]
       });
@@ -164,19 +164,21 @@ export const loginStore = async (req, res) => {
         return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Store account is inactive' });
       }
 
-      const token = jwt.sign({ storeId: store.id,user: store.id, tenantId: store.tenantId, role: 'store_admin' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+      const token = jwt.sign({ storeId: store.id,user: store.id, tenantId: store.tenantId, role: 'store' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
 
       // Extract business type and tenant ID for frontend
       const businessType = getJsonValue(store, ['Tenant', 'BusinessType']);
       const tenantId = getJsonValue(store, ['Tenant', 'id']);
+      const vendorType = businessType?.name?.toLowerCase();
 
       return sendResponse(res, {
         message: 'Store login successful',
         data: {
-          store: { ...store.toJSON(), role: 'store_admin' },
+          store: { ...store.toJSON(), role: 'store', vendorType },
           token,
           businessType,
-          tenantId
+          tenantId,
+          vendorType
         }
       });
     }
@@ -217,14 +219,16 @@ export const loginStore = async (req, res) => {
 
       const businessType = getJsonValue(tenantUser, ['Tenant', 'BusinessType']);
       const tenantId = getJsonValue(tenantUser, ['Tenant', 'id']);
+      const vendorType = businessType?.name?.toLowerCase();
 
       return sendResponse(res, {
         message: 'Staff login successful',
         data: {
-          store: tenantUser, // Sending User object in place of store for compatibility
+          store: { ...tenantUser.toJSON(), vendorType }, // Sending User object in place of store for compatibility
           token,
           businessType,
-          tenantId
+          tenantId,
+          vendorType
         }
       });
     }

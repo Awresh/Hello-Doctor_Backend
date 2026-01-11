@@ -122,6 +122,81 @@ export const updateDoctorSlots = async (req, res) => {
         let config = await DoctorSlotConfig.findOne({ where: { doctorId, tenantId } })
 
         if (config) {
+            // --- SMART SYNC LOGIC ---
+            if (customWeeklySlots) {
+                const oldSlots = config.customWeeklySlots || {};
+                const newSlots = customWeeklySlots;
+                const changedDays = [];
+
+                Object.keys(newSlots).forEach(day => {
+                    // Compare sorted arrays to detect changes
+                    const oldArr = (oldSlots[day] || []).slice().sort();
+                    const newArr = (newSlots[day] || []).slice().sort();
+                    if (JSON.stringify(oldArr) !== JSON.stringify(newArr)) {
+                        changedDays.push(day);
+                    }
+                });
+
+                if (changedDays.length > 0) {
+                     // Find future overrides to sync
+                     const todayStr = new Date().toLocaleDateString('en-CA');
+                     const futureOverrides = await SlotOverride.findAll({
+                         where: {
+                             tenantId,
+                             doctorId,
+                             date: { [Op.gte]: todayStr }
+                         }
+                     });
+                     
+                     for (const override of futureOverrides) {
+                         const d = new Date(override.date);
+                         const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+                         
+                         if (changedDays.includes(dayName)) {
+                             const oldBaseTimes = oldSlots[dayName] || [];
+                             const newBaseTimes = newSlots[dayName] || [];
+                             const currentOverrideSlots = override.slots || []; 
+                             
+                             // 1. Identify Manual Slots (in Override but NOT in Old Base)
+                             // Preserves emergency slots added by user
+                             const manualSlots = currentOverrideSlots.filter(s => {
+                                 const t = s.startTime || s; 
+                                 return !oldBaseTimes.includes(t);
+                             });
+                             
+                             // 2. Create objects for New Base
+                             // Use new patient limit or fallback to existing config
+                             const patientsLimit = numberOfPerSlot !== undefined ? parseInt(numberOfPerSlot) : config.numberOfPerSlot;
+                             
+                             const newBaseObjects = newBaseTimes.map(time => ({
+                                 startTime: time,
+                                 maxPatients: patientsLimit || 1
+                             }));
+                             
+                             // 3. Merge: Manual slots + New Base slots
+                             // Deduplicate: If time exists in both, prefer Manual (it might have custom settings)
+                             // actually if it's in NewBase, it's a standard slot now. 
+                             // But if it was also manual, maybe we keep manual props?
+                             // Let's just merge list and ensure unique startTime
+                             
+                             const combined = [...manualSlots];
+                             newBaseObjects.forEach(nb => {
+                                 if (!combined.find(c => c.startTime === nb.startTime)) {
+                                     combined.push(nb);
+                                 }
+                             });
+                             
+                             combined.sort((a,b) => a.startTime.localeCompare(b.startTime));
+                             
+                             override.slots = combined;
+                             // console.log(`Smart Sync Updating ${override.date}:`, combined);
+                             await override.save();
+                         }
+                     }
+                }
+            }
+            // ------------------------
+
             if (useClinicSlots !== undefined) config.useClinicSlots = useClinicSlots
             if (customWeeklySlots !== undefined) config.customWeeklySlots = customWeeklySlots
             if (numberOfPerSlot !== undefined) config.numberOfPerSlot = numberOfPerSlot
@@ -230,6 +305,47 @@ export const createOverride = async (req, res) => {
     }
 }
 
+// Delete Override (Admin only)
+export const deleteOverride = async (req, res) => {
+    try {
+        const { doctorId, date, tenantId: queryTenantId } = req.query
+        const tenantId = req.user?.tenantId || req.tenant?.id || queryTenantId
+
+        // Admin check
+        if (!req.admin && !req.user?.isAdmin && !req.user?.role?.includes('admin')) {
+             if (!req.user && !req.tenant && !tenantId) {
+                return sendResponse(res, { statusCode: STATUS_CODES.UNAUTHORIZED, success: false, message: 'Unauthorized. No user found.' })
+            }
+        }
+
+        if (!tenantId) {
+            return sendResponse(res, { statusCode: STATUS_CODES.BAD_REQUEST, success: false, message: 'Tenant ID is required.' })
+        }
+
+        if (!date) {
+            return sendResponse(res, { statusCode: STATUS_CODES.BAD_REQUEST, success: false, message: 'Date is required.' })
+        }
+
+        const deleted = await SlotOverride.destroy({
+            where: {
+                tenantId,
+                doctorId: doctorId || null,
+                date
+            }
+        })
+
+        if (deleted) {
+             return sendResponse(res, { message: 'Override deleted successfully', success: true })
+        } else {
+             return sendResponse(res, { statusCode: STATUS_CODES.NOT_FOUND, success: false, message: 'No override found to delete' })
+        }
+
+    } catch (error) {
+        console.error('Delete Override Error:', error)
+        return sendResponse(res, { statusCode: STATUS_CODES.INTERNAL_SERVER_ERROR, success: false, message: 'Failed to delete override' })
+    }
+}
+
 // --- Public / Booking Logic ---
 
 // Get Available Slots for a Date
@@ -290,6 +406,9 @@ export default {
     getClinicSlots,
     updateDoctorSlots,
     getDoctorSlots,
+    updateDoctorSlots,
+    getDoctorSlots,
     createOverride,
+    deleteOverride,
     getAvailableSlots
 }

@@ -12,10 +12,18 @@ export const TenantUser = sequelize.define('TenantUser', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    role: {
+    profilePic: {
         type: DataTypes.STRING,
-        allowNull: false,
-        comment: 'Role of the user e.g. doctor, receptionist'
+        allowNull: true
+    },
+    role: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Changed to allow null temporarily for migration/safety
+        references: {
+            model: 'roles',
+            key: 'id'
+        },
+        comment: 'Reference to Role ID'
     },
     about: {
         type: DataTypes.TEXT,

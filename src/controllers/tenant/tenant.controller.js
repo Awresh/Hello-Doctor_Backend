@@ -1,4 +1,4 @@
-import { Tenant, BusinessType, Role, Store, TenantUser } from "../../models/index.js";
+import { Tenant, BusinessType, Role, Store, TenantUser, Subscription, Plan } from "../../models/index.js";
 import { Op } from "sequelize";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
@@ -98,19 +98,30 @@ export const getLicenseUsage = async (req, res) => {
         }
 
         const tenant = await Tenant.findByPk(tenantId, {
-            include: [{ model: BusinessType }]
+            include: [
+                { model: BusinessType },
+                { 
+                    model: Subscription, 
+                    where: { status: 'active' }, 
+                    required: false, // Left join, so we get tenant even if no active subscription
+                    include: [{ model: Plan }]
+                }
+            ]
         });
 
         if (!tenant) {
             return sendResponse(res, { statusCode: STATUS_CODES.NOT_FOUND, success: false, message: "Tenant not found" });
         }
 
+        const activePlan = tenant.Subscription?.Plan;
+
         const limits = {
-            maxRoles: tenant.customMaxRoles !== null ? tenant.customMaxRoles : (tenant.BusinessType?.maxRoles || 0),
-            maxUsers: tenant.customMaxUsers !== null ? tenant.customMaxUsers : (tenant.BusinessType?.maxUsers || 0),
-            maxStores: tenant.customMaxStores !== null ? tenant.customMaxStores : (tenant.BusinessType?.maxStores || 0),
-            maxDoctors: tenant.customMaxDoctors !== null ? tenant.customMaxDoctors : (tenant.BusinessType?.maxDoctors || 0),
-            maxStaff: tenant.customMaxStaff !== null ? tenant.customMaxStaff : (tenant.BusinessType?.maxStaff || 0),
+            maxRoles: tenant.customMaxRoles ?? activePlan?.maxRoles ?? tenant.BusinessType?.maxRoles ?? 0,
+            maxUsers: tenant.customMaxUsers ?? activePlan?.maxUsers ?? tenant.BusinessType?.maxUsers ?? 0,
+            maxStores: tenant.customMaxStores ?? activePlan?.maxStores ?? tenant.BusinessType?.maxStores ?? 0,
+            maxDoctors: tenant.customMaxDoctors ?? activePlan?.maxDoctors ?? tenant.BusinessType?.maxDoctors ?? 0,
+            maxStaff: tenant.customMaxStaff ?? activePlan?.maxStaff ?? tenant.BusinessType?.maxStaff ?? 0,
+            whatsappCredits: tenant.whatsappCredits || 0
         };
 
         const [
@@ -123,23 +134,17 @@ export const getLicenseUsage = async (req, res) => {
             Role.count({ where: { tenantId, isActive: true } }),
             Store.count({ where: { tenantId, isActive: true } }),
             TenantUser.count({ where: { tenantId } }),
-            TenantUser.count({ 
-                where: { 
+            TenantUser.count({
+                where: {
                     tenantId,
-                    [Op.or]: [
-                        { role: { [Op.iLike]: 'doctor' } },
-                        { role: '3' }
-                    ]
-                } 
+                    isDoctor: true
+                }
             }),
-            TenantUser.count({ 
-                where: { 
+            TenantUser.count({
+                where: {
                     tenantId,
-                     [Op.and]: [
-                        { role: { [Op.notILike]: 'doctor' } },
-                        { role: { [Op.ne]: '3' } }
-                    ]
-                } 
+                    isDoctor: false
+                }
             })
         ]);
 

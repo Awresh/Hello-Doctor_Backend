@@ -66,7 +66,7 @@ router.delete('/section/:id', menuController.deleteSection);
  * @desc    Get menu in sidebarService format (with sections and baseRoute)
  * @query   userRole - optional
  */
-router.get('/sidebar', menuController.getMenuForSidebar);
+router.get('/sidebar', authenticateUser, menuController.getMenuForSidebar);
 
 // ============================================
 // MENU ITEM CRUD

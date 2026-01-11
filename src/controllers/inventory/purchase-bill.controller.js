@@ -1,7 +1,7 @@
 import { PurchaseBill } from "../../models/inventory/purchase-bill.model.js";
 import { Product } from "../../models/inventory/product.model.js";
 import { PriceHistory } from "../../models/inventory/price-history.model.js";
-import { Tenant, Supplier } from "../../models/index.js";
+import { Tenant, Supplier, Store } from "../../models/index.js";
 import { MESSAGES } from "../../config/serverConfig.js";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
@@ -12,8 +12,8 @@ const PurchaseBillController = {
     createPurchaseBill: async (req, res) => {
         try {
             console.log('=== CREATE PURCHASE BILL START ===');
-            
-            const { supplier, products, purchaseDate, notes, billImages } = req.body;
+
+            const { supplier, products, purchaseDate, notes, billImages, billNumber } = req.body;
             const tenant = req.tenant;
             const tenantId = tenant?.id;
             const storeData = req.store;
@@ -43,11 +43,12 @@ const PurchaseBillController = {
             const purchaseBill = await PurchaseBill.create({
                 tenantId,
                 storeId,
-                supplierId: supplier, 
+                supplierId: supplier,
                 products, // JSON field
                 totalAmount,
                 purchaseDate: purchaseDate || new Date(),
                 notes,
+                billNumber,
                 billImages: billImages || [],
                 status: 'completed'
             });
@@ -94,9 +95,9 @@ const PurchaseBillController = {
                         let allocations = product.storeAllocations || [];
                         // Ensure allocations is array
                         if (!Array.isArray(allocations)) allocations = [];
-                        
+
                         const allocationIndex = allocations.findIndex(sa => sa.storeId.toString() === storeId.toString());
-                        
+
                         if (allocationIndex >= 0) {
                             allocations[allocationIndex].stock = (allocations[allocationIndex].stock || 0) + Number(item.quantity);
                         } else {
@@ -123,8 +124,8 @@ const PurchaseBillController = {
                         : product.globalStock;
 
                     const currentMinStock = storeId
-                         ? (product.storeAllocations?.find(sa => sa.storeId.toString() === storeId.toString())?.minStock || 5)
-                         : (product.minStock || 10);
+                        ? (product.storeAllocations?.find(sa => sa.storeId.toString() === storeId.toString())?.minStock || 5)
+                        : (product.minStock || 10);
 
                     if (currentStock > 0) {
                         product.stockStatus = currentStock > currentMinStock ? 'In Stock' : 'Low Stock';
@@ -149,9 +150,18 @@ const PurchaseBillController = {
 
         } catch (error) {
             console.error("Create Purchase Bill Error:", error);
+            // Handle Sequelize validation errors
+            if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+                return sendResponse(res, {
+                    message: "Validation Error: " + error.errors.map(e => e.message).join(', '),
+                    success: false,
+                    data: error.errors
+                });
+            }
             return sendResponse(res, {
                 message: error.message || STATUS_CODES.INTERNAL_SERVER_ERROR,
                 success: false,
+                data: error.errors || null
             });
         }
     },
@@ -192,19 +202,18 @@ const PurchaseBillController = {
                 if (endDate) whereClause.purchaseDate[Op.lte] = new Date(endDate);
             }
 
-            const offset = (parseInt(page) - 1) * parseInt(limit);
-
             const { count, rows } = await PurchaseBill.findAndCountAll({
                 where: whereClause,
-                attributes: { 
-                    exclude: ['products', 'billImages'] 
+                attributes: {
+                    exclude: ['products', 'billImages']
                 },
                 include: [
-                    { model: Supplier, as: 'supplier', attributes: ['name', 'contactNumber', 'email'] }
+                    { model: Supplier, as: 'supplier', attributes: ['name', 'contactNumber', 'email'] },
+                    { model: Store, as: 'store', attributes: ['name', 'contactNumber', 'email'] },
                 ],
                 order: [['createdAt', 'DESC']],
-                limit: parseInt(limit),
-                offset: offset,
+                // limit: parseInt(limit), // Pagination removed
+                // offset: offset,
                 distinct: true
             });
 
@@ -217,15 +226,7 @@ const PurchaseBillController = {
 
             return sendResponse(res, {
                 message: "Purchase bills fetched successfully",
-                data: {
-                    purchaseBills: response,
-                    pagination: {
-                        total: count,
-                        page: parseInt(page),
-                        limit: parseInt(limit),
-                        totalPages: Math.ceil(count / parseInt(limit))
-                    }
-                },
+                data: response,
             });
 
         } catch (error) {
@@ -251,7 +252,7 @@ const PurchaseBillController = {
                 });
             }
 
-            const purchaseBill = await PurchaseBill.findOne({ 
+            const purchaseBill = await PurchaseBill.findOne({
                 where: { id, tenantId },
                 include: [
                     { model: Supplier, as: 'supplier', attributes: ['name', 'contactNumber', 'email', 'address'] }
@@ -303,7 +304,7 @@ const PurchaseBillController = {
     updatePurchaseBill: async (req, res) => {
         try {
             const { id } = req.params;
-            const { supplier, products, purchaseDate, notes, billImages, status } = req.body;
+            const { supplier, products, purchaseDate, notes, billImages, status, billNumber } = req.body;
             const tenant = req.tenant;
             const tenantId = tenant?.id;
             const storeData = req.store;
@@ -352,6 +353,7 @@ const PurchaseBillController = {
             if (notes !== undefined) purchaseBill.notes = notes;
             if (billImages) purchaseBill.billImages = billImages;
             if (status) purchaseBill.status = status;
+            if (billNumber) purchaseBill.billNumber = billNumber;
 
             await purchaseBill.save();
 
@@ -361,7 +363,7 @@ const PurchaseBillController = {
                 if (product) {
                     // Logic to apply stock similar to create...
                     // For brevity, using simplified update:
-                     if (storeId) {
+                    if (storeId) {
                         let allocations = product.storeAllocations || [];
                         const allocationIndex = allocations.findIndex(sa => sa.storeId.toString() === storeId.toString());
                         if (allocationIndex >= 0) {
@@ -372,9 +374,9 @@ const PurchaseBillController = {
                         product.storeAllocations = allocations;
                         product.changed('storeAllocations', true);
                     } else {
-                         product.globalStock = (product.globalStock || 0) + item.quantity;
+                        product.globalStock = (product.globalStock || 0) + item.quantity;
                     }
-                    
+
                     product.buyPrice = item.buyPrice;
                     product.sellingPrice = item.sellingPrice;
                     await product.save();
@@ -420,19 +422,19 @@ const PurchaseBillController = {
                 const product = await Product.findByPk(item.product);
                 if (product) {
                     if (storeId) {
-                         // Reverse store allocation
-                         let allocations = product.storeAllocations || [];
-                         if (Array.isArray(allocations)) {
-                             const allocationIndex = allocations.findIndex(sa => sa.storeId.toString() === storeId.toString());
-                             if (allocationIndex >= 0) {
-                                 allocations[allocationIndex].stock = Math.max(0, (allocations[allocationIndex].stock || 0) - Number(item.quantity));
-                                 product.storeAllocations = allocations;
-                                 product.changed('storeAllocations', true);
-                             }
-                         }
+                        // Reverse store allocation
+                        let allocations = product.storeAllocations || [];
+                        if (Array.isArray(allocations)) {
+                            const allocationIndex = allocations.findIndex(sa => sa.storeId.toString() === storeId.toString());
+                            if (allocationIndex >= 0) {
+                                allocations[allocationIndex].stock = Math.max(0, (allocations[allocationIndex].stock || 0) - Number(item.quantity));
+                                product.storeAllocations = allocations;
+                                product.changed('storeAllocations', true);
+                            }
+                        }
                     } else {
-                         // Reverse global stock
-                         product.globalStock = Math.max(0, (product.globalStock || 0) - Number(item.quantity));
+                        // Reverse global stock
+                        product.globalStock = Math.max(0, (product.globalStock || 0) - Number(item.quantity));
                     }
 
                     // Update stock status
@@ -441,8 +443,8 @@ const PurchaseBillController = {
                         : product.globalStock;
 
                     const currentMinStock = storeId
-                         ? (product.storeAllocations?.find(sa => sa.storeId.toString() === storeId.toString())?.minStock || 5)
-                         : (product.minStock || 10);
+                        ? (product.storeAllocations?.find(sa => sa.storeId.toString() === storeId.toString())?.minStock || 5)
+                        : (product.minStock || 10);
 
                     if (currentStock > 0) {
                         product.stockStatus = currentStock > currentMinStock ? 'In Stock' : 'Low Stock';
@@ -453,7 +455,7 @@ const PurchaseBillController = {
                     await product.save();
                 }
             }
-            
+
             await purchaseBill.destroy();
 
             return sendResponse(res, {
@@ -485,7 +487,7 @@ const PurchaseBillController = {
             }
 
             const products = await Product.findAll({
-                where: { 
+                where: {
                     supplierId: id,
                     tenantId
                 }
@@ -507,7 +509,7 @@ const PurchaseBillController = {
 
     // Add payment
     addPayment: async (req, res) => {
-         try {
+        try {
             const { id } = req.params;
             const { amount, date, method, reference, notes } = req.body;
             const tenant = req.tenant;
@@ -521,9 +523,9 @@ const PurchaseBillController = {
                     success: false,
                 });
             }
-            
+
             const paymentAmount = Number(amount);
-            const currentPaid = purchaseBill.paidAmount || 0;
+            const currentPaid = Number(purchaseBill.paidAmount) || 0;
             // totalAmount calculation depends on products, assuming it's available or we calc it.
             // Simplified here. 
 
@@ -536,20 +538,20 @@ const PurchaseBillController = {
                 notes,
                 recordedBy: tenantId
             });
-            
+
             purchaseBill.payments = payments;
             purchaseBill.changed('payments', true);
             purchaseBill.paidAmount = currentPaid + paymentAmount;
-            
+
             await purchaseBill.save();
-            
+
             return sendResponse(res, {
                 message: "Payment recorded successfully",
                 data: purchaseBill,
             });
 
         } catch (error) {
-             return sendResponse(res, {
+            return sendResponse(res, {
                 message: STATUS_CODES.INTERNAL_SERVER_ERROR,
                 success: false,
             });

@@ -2,7 +2,15 @@ import sequelize from '../config/db.config.js';
 import { Tenant } from './tenant/tenant.model.js';
 import { TenantUser } from './tenant/tenent.user.model.js';
 import { DoctorDetails } from './tenant/doctor-details.model.js';
+import { DoctorService } from './tenant/doctor-service.model.js';
 import { User } from './users/user.model.js';
+
+import { Plan } from './business/plan.model.js';
+import { Subscription } from './tenant/subscription.model.js';
+import { PaymentMethod } from './tenant/payment-method.model.js';
+import { BillingHistory } from './tenant/billing-history.model.js';
+import { PaymentMode } from './tenant/payment-mode.model.js';
+
 import { BusinessType } from './business/business-type.model.js';
 import { Product } from './inventory/product.model.js';
 import { Category } from './inventory/category.model.js';
@@ -19,12 +27,16 @@ import { MenuItem } from './menu/menu-item.model.js';
 import { BaseRoute } from './menu/base-route.model.js';
 import { Customer } from './inventory/customer.model.js';
 import { Appointment } from './clinic/appointment.model.js';
+import { Prescription } from './clinic/prescription.model.js';
 import { TimeSlot } from './admin/time-slot.model.js';
 import { ClinicSlotConfig } from './clinic/clinic-slot-config.model.js';
 import { DoctorSlotConfig } from './clinic/doctor-slot-config.model.js';
 import { SlotOverride } from './clinic/slot-override.model.js';
 import { Admin } from './admin/admin.model.js';
 import { Role } from './tenant/role.model.js';
+import { Notification } from './notification/notification.model.js';
+import { TimeSettings } from './settings/time-settings.model.js';
+import { SpecialHoliday } from './settings/special-holiday.model.js';
 
 // Define associations after all models are loaded
 function setupAssociations() {
@@ -41,6 +53,14 @@ function setupAssociations() {
   // Doctor Details Association
   TenantUser.hasOne(DoctorDetails, { foreignKey: 'tenantUserId', as: 'doctorDetails' });
   DoctorDetails.belongsTo(TenantUser, { foreignKey: 'tenantUserId' });
+
+  // Doctor Services Association
+  TenantUser.hasMany(DoctorService, { foreignKey: 'tenantUserId', as: 'assignedServices' });
+  DoctorService.belongsTo(TenantUser, { foreignKey: 'tenantUserId' });
+
+  DoctorService.belongsTo(Product, { foreignKey: 'serviceId', as: 'service' });
+  DoctorService.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(DoctorService, { foreignKey: 'tenantId' });
 
   // Product associations - SAAS Product relationships
   Product.belongsTo(Tenant, { foreignKey: 'tenantId' });
@@ -102,8 +122,8 @@ function setupAssociations() {
   // Bill associations
   PurchaseBill.belongsTo(Tenant, { foreignKey: 'tenantId' });
   PurchaseBill.belongsTo(Supplier, { foreignKey: 'supplierId', as: 'supplier' });
-  PurchaseBill.belongsTo(Store, { foreignKey: 'storeId' });
-  Store.hasMany(PurchaseBill, { foreignKey: 'storeId' });
+  PurchaseBill.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+  Store.hasMany(PurchaseBill, { foreignKey: 'storeId', as: 'purchaseBills' });
 
   SalesBill.belongsTo(Tenant, { foreignKey: 'tenantId' });
   SalesBill.belongsTo(Store, { foreignKey: 'storeId' });
@@ -155,6 +175,52 @@ function setupAssociations() {
   // Role associations
   Role.belongsTo(Tenant, { foreignKey: 'tenantId' });
   Tenant.hasMany(Role, { foreignKey: 'tenantId' });
+  TenantUser.belongsTo(Role, { foreignKey: 'role', as: 'userRole' });
+
+  // Notification associations
+  Notification.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(Notification, { foreignKey: 'tenantId' });
+  Notification.belongsTo(TenantUser, { foreignKey: 'userId', as: 'recipient' });
+  TenantUser.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+
+  // Subscription & Billing associations
+  Subscription.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasOne(Subscription, { foreignKey: 'tenantId' });
+
+  Subscription.belongsTo(Plan, { foreignKey: 'planId' });
+  Plan.hasMany(Subscription, { foreignKey: 'planId' });
+
+  PaymentMethod.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(PaymentMethod, { foreignKey: 'tenantId' });
+
+  BillingHistory.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(BillingHistory, { foreignKey: 'tenantId' });
+
+  BillingHistory.belongsTo(Subscription, { foreignKey: 'subscriptionId' });
+  BillingHistory.belongsTo(Subscription, { foreignKey: 'subscriptionId' });
+  Subscription.hasMany(BillingHistory, { foreignKey: 'subscriptionId' });
+
+  // Payment Mode associations
+  PaymentMode.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(PaymentMode, { foreignKey: 'tenantId' });
+
+  // Time Settings associations
+  TimeSettings.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(TimeSettings, { foreignKey: 'tenantId' });
+
+  // Special Holiday associations
+  SpecialHoliday.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(SpecialHoliday, { foreignKey: 'tenantId' });
+
+  // Prescription associations
+  Prescription.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(Prescription, { foreignKey: 'tenantId' });
+  Prescription.belongsTo(Appointment, { foreignKey: 'appointmentId' });
+  Appointment.hasOne(Prescription, { foreignKey: 'appointmentId' });
+  Prescription.belongsTo(User, { foreignKey: 'userId' });
+  User.hasMany(Prescription, { foreignKey: 'userId' });
+  Prescription.belongsTo(TenantUser, { foreignKey: 'doctorId', as: 'doctor' });
+  TenantUser.hasMany(Prescription, { foreignKey: 'doctorId', as: 'prescriptions' });
 
 }
 
@@ -163,6 +229,7 @@ export {
   Tenant,
   TenantUser,
   DoctorDetails,
+  DoctorService,
   User,
   Admin,
   BusinessType,
@@ -185,5 +252,14 @@ export {
   DoctorSlotConfig,
   SlotOverride,
   Role,
+  Notification,
+  Plan,
+  Subscription,
+  PaymentMethod,
+  BillingHistory,
+  PaymentMode,
+  TimeSettings,
+  SpecialHoliday,
+  Prescription,
   setupAssociations
 };

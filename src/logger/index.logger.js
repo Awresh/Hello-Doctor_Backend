@@ -18,18 +18,18 @@ const getCallerInfo = format((info) => {
   // Increase stack trace limit to ensure we find the caller
   const originalLimit = Error.stackTraceLimit;
   Error.stackTraceLimit = 50;
-  
+
   const obj = {};
   Error.captureStackTrace(obj);
   Error.stackTraceLimit = originalLimit; // Restore limit
-  
+
   // Parse stack trace
   const stack = obj.stack.split('\n');
-  
+
   // Find the first line that isn't from node_modules, this logger file, or internal node modules
-  let callerLine = stack.find(line => 
-    !line.includes('node_modules') && 
-    !line.includes('logger/index.logger.js') && 
+  let callerLine = stack.find(line =>
+    !line.includes('node_modules') &&
+    !line.includes('logger/index.logger.js') &&
     !line.includes('Error') &&
     !line.includes('node:')
   );
@@ -44,7 +44,7 @@ const getCallerInfo = format((info) => {
       info.lineNumber = match[3];
     }
   }
-  
+
   return info;
 });
 
@@ -57,7 +57,7 @@ const fileFormat = format.printf(({ level, message, timestamp, fileName, lineNum
   if (fileName) {
     location = ` [${fileName}:${lineNumber} ${functionName}]`;
   }
-  
+
   let logMessage = `${timestamp} [${level.toUpperCase()}]${location}: ${message}`;
   if (Object.keys(meta).length > 0) {
     logMessage += ` ${JSON.stringify(meta)}`;

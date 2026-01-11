@@ -15,6 +15,14 @@ export const Product = sequelize.define('Product', {
       key: 'id'
     }
   },
+  storeId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'stores',
+      key: 'id'
+    }
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false
@@ -63,6 +71,14 @@ export const Product = sequelize.define('Product', {
     type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0
   },
+  gstRate: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
+  },
+  gstType: {
+    type: DataTypes.ENUM('Inclusive', 'Exclusive'),
+    defaultValue: 'Exclusive'
+  },
   status: {
     type: DataTypes.ENUM('Active', 'Inactive', 'Archived'),
     defaultValue: 'Active'
@@ -74,6 +90,10 @@ export const Product = sequelize.define('Product', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  type: {
+    type: DataTypes.ENUM('Product', 'Service'),
+    defaultValue: 'Product'
   },
   minStock: {
     type: DataTypes.INTEGER,
@@ -92,7 +112,7 @@ export const Product = sequelize.define('Product', {
   timestamps: true,
   indexes: [
     {
-      fields: ['tenantId']
+      fields: ['tenantId','storeId']
     },
     {
       fields: ['tenantId', 'createdAt']

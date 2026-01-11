@@ -10,12 +10,18 @@ import ProductController from '../controllers/inventory/product.controller.js';
 import SupplierController from "../controllers/inventory/supplier.controller.js";
 import PurchaseBillController from "../controllers/inventory/purchase-bill.controller.js";
 import { createSalesBill, getAllSalesBills } from '../controllers/inventory/sales-bill.controller.js';
+import { getDashboardStats } from '../controllers/inventory/dashboard.controller.js';
 
 const router = express.Router();
+
+// Dashboard
+router.get('/inventory/dashboard', getDashboardStats);
 
 // Sales Bills
 router.post('/inventory/sales-bills', createSalesBill);
 router.get('/inventory/sales-bills', getAllSalesBills);
+router.get('/sells', getAllSalesBills);  // Alias
+router.get('/sales', getAllSalesBills); // Alias
 
 // Customers
 import { createCustomer, searchCustomers } from '../controllers/inventory/customer.controller.js';
@@ -67,7 +73,9 @@ router.delete(API_ROUTES.SUPPLIER_DELETE, SupplierController.delete);
 // --- Stores ---
 router.get(API_ROUTES.STORES, StoreController.getAllStores);
 router.get(API_ROUTES.STORE_BY_ID, StoreController.getStoreById);
-router.post(API_ROUTES.STORES, StoreController.createStore);
+import { checkLimit } from '../middleware/limit.middleware.js';
+
+router.post(API_ROUTES.STORES, checkLimit('stores'), StoreController.createStore);
 router.patch(API_ROUTES.STORE_BY_ID, StoreController.updateStore);
 router.delete(API_ROUTES.STORE_BY_ID, StoreController.deleteStore);
 router.patch(API_ROUTES.STORE_DISABLE, StoreController.disableStore);
