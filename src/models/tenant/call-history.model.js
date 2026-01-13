@@ -3,25 +3,24 @@ import sequelize from '../../config/db.config.js';
 
 const CallHistory = sequelize.define('call_history', {
     id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        allowNull: false,
-        primaryKey: true
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
     },
     callerId: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false
     },
     receiverId: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false
     },
     status: {
-        type: DataTypes.ENUM('initiated', 'ongoing', 'completed', 'missed', 'rejected'),
+        type: DataTypes.STRING,
         defaultValue: 'initiated'
     },
     type: {
-        type: DataTypes.ENUM('audio', 'video'),
+        type: DataTypes.STRING,
         defaultValue: 'audio'
     },
     startTime: {
@@ -38,7 +37,7 @@ const CallHistory = sequelize.define('call_history', {
     }
 }, {
     tableName: 'call_history',
-    timestamps: true 
+    timestamps: true
 });
 
 export { CallHistory };

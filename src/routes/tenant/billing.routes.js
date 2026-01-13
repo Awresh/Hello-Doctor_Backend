@@ -16,4 +16,8 @@ router.post("/payment-methods", billingController.addPaymentMethod);
 router.delete("/payment-methods/:id", billingController.deletePaymentMethod);
 router.patch("/payment-methods/:id/primary", billingController.setPrimaryMethod);
 
+// Wallet
+router.post("/wallet/recharge", billingController.createWalletRechargeOrder);
+router.post("/wallet/verify", billingController.verifyWalletRecharge);
+
 export default router;

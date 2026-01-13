@@ -70,6 +70,12 @@ export const Tenant = sequelize.define('Tenant', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
     comment: 'Number of WhatsApp messages allowed'
+  },
+  walletBalance: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0.00,
+    field: 'wallet_balance',
+    comment: 'Wallet token balance (1 Token = 1 Rs)'
   }
 }, {
   tableName: 'tenants',
@@ -116,7 +122,7 @@ Tenant.prototype.getLimits = async function () {
   // or rely on Sequelize association mixins.
   // Assuming 'Subscription' and 'Plan' are associated.
   // Safest is to rely on lazy loading if not already eager loaded.
-  
+
   let plan = null;
   if (!this.Subscription && this.getSubscription) {
     try {
@@ -128,10 +134,10 @@ Tenant.prototype.getLimits = async function () {
       console.warn("Could not fetch subscription for limits:", e);
     }
   } else if (this.Subscription && this.Subscription.Plan) {
-      // If already eagerly loaded
-       if (this.Subscription.status === 'active') {
-        plan = this.Subscription.Plan;
-       }
+    // If already eagerly loaded
+    if (this.Subscription.status === 'active') {
+      plan = this.Subscription.Plan;
+    }
   }
 
   // 3. Fallback to Plan Limits or Defaults

@@ -17,7 +17,7 @@ export const BillingHistory = sequelize.define('BillingHistory', {
     },
     planId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: 'erp_plans',
             key: 'id'

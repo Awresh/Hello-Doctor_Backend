@@ -29,7 +29,6 @@ httpServer.listen(PORT, async () => {
         console.log("Registered Models:", Object.keys(sequelize.models)); // DEBUG
 
         // Sync database (create tables if they don't exist)
-        // verify that the table doesn't already exist
         await sequelize.sync({ alter: true });
         logger.info('Database synchronized successfully.');
 

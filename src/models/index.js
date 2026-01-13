@@ -38,6 +38,7 @@ import { Notification } from './notification/notification.model.js';
 import { TimeSettings } from './settings/time-settings.model.js';
 import { SpecialHoliday } from './settings/special-holiday.model.js';
 import { CallHistory } from './tenant/call-history.model.js';
+import { CallBillingHistory } from './tenant/call-billing-history.model.js';
 
 // Define associations after all models are loaded
 function setupAssociations() {
@@ -52,10 +53,20 @@ function setupAssociations() {
   TenantUser.hasMany(TenantUser, { foreignKey: 'doctorId', as: 'staff' });
 
   // Call History Associations
-  CallHistory.belongsTo(TenantUser, { as: 'caller', foreignKey: 'callerId' });
-  CallHistory.belongsTo(TenantUser, { as: 'receiver', foreignKey: 'receiverId' });
-  TenantUser.hasMany(CallHistory, { as: 'outgoingCalls', foreignKey: 'callerId' });
-  TenantUser.hasMany(CallHistory, { as: 'incomingCalls', foreignKey: 'receiverId' });
+  CallHistory.belongsTo(TenantUser, { as: 'caller', foreignKey: 'callerId', constraints: false });
+  CallHistory.belongsTo(TenantUser, { as: 'receiver', foreignKey: 'receiverId', constraints: false });
+  CallHistory.belongsTo(Tenant, { as: 'callerTenant', foreignKey: 'callerId', constraints: false });
+  CallHistory.belongsTo(Tenant, { as: 'receiverTenant', foreignKey: 'receiverId', constraints: false });
+  TenantUser.hasMany(CallHistory, { as: 'outgoingCalls', foreignKey: 'callerId', constraints: false });
+  TenantUser.hasMany(CallHistory, { as: 'incomingCalls', foreignKey: 'receiverId', constraints: false });
+
+  // Call Billing History Associations
+  CallBillingHistory.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  CallBillingHistory.belongsTo(TenantUser, { as: 'Caller', foreignKey: 'callerId' });
+  CallBillingHistory.belongsTo(TenantUser, { as: 'Receiver', foreignKey: 'receiverId' });
+  TenantUser.hasMany(CallBillingHistory, { as: 'outgoingBilledCalls', foreignKey: 'callerId' });
+  TenantUser.hasMany(CallBillingHistory, { as: 'incomingBilledCalls', foreignKey: 'receiverId' });
+  Tenant.hasMany(CallBillingHistory, { foreignKey: 'tenantId' });
 
   // Doctor Details Association
   TenantUser.hasOne(DoctorDetails, { foreignKey: 'tenantUserId', as: 'doctorDetails' });
@@ -269,5 +280,6 @@ export {
   SpecialHoliday,
   Prescription,
   CallHistory,
+  CallBillingHistory,
   setupAssociations
 };
