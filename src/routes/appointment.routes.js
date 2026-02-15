@@ -1,0 +1,31 @@
+import express from 'express'
+import appointmentController from '../controllers/clinic/appointment.controller.js'
+import { verifyToken as authenticateUser } from '../middleware/auth.middleware.js';
+
+const router = express.Router()
+
+// Create a new appointment
+router.post('/api/appointments', authenticateUser, appointmentController.createAppointment)
+
+// Get all appointments (with filters)
+router.get('/api/appointments', authenticateUser, appointmentController.getAppointments)
+
+// Get available slots
+router.get('/api/appointments/available-slots', authenticateUser, appointmentController.getAvailableSlots)
+
+// Get a single appointment by ID
+router.get('/api/appointments/:id', authenticateUser, appointmentController.getAppointmentById)
+
+// Update appointment status
+router.patch('/api/appointments/:id/status', authenticateUser, appointmentController.updateAppointmentStatus)
+
+// Update appointment details (Generic PUT)
+router.put('/api/appointments/:id', authenticateUser, appointmentController.updateAppointment)
+
+// Reorder appointment (Move down in queue)
+router.post('/api/appointments/:id/reorder', authenticateUser, appointmentController.reorderQueue)
+
+// Search Patients
+router.get('/clinic/patients', authenticateUser, appointmentController.searchPatients)
+
+export default router

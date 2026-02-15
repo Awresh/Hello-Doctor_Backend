@@ -1,0 +1,9 @@
+export { BaseRepository } from './base.repository.js';
+export { AdminRepository } from './admin.repository.js';
+export { AppointmentRepository } from './appointment.repository.js';
+export { SlotRepository } from './slot.repository.js';
+export { TenantRepository } from './tenant.repository.js';
+export { UserRepository } from './user.repository.js';
+export { ProductRepository } from './product.repository.js';
+export { NotificationRepository } from './notification.repository.js';
+export { CrudRepository } from './crud.repository.js';
