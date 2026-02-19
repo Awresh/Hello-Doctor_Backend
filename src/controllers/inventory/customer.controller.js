@@ -7,18 +7,8 @@ import { Op } from "sequelize";
 // Create Customer
 export const createCustomer = async (req, res) => {
     try {
-        const tenant = req.tenant;
-        const tenantId = tenant?.id;
         const storeData = req.store;
         const storeId = storeData?.id;
-
-        if (!tenantId) {
-            return sendResponse(res, { 
-                statusCode: STATUS_CODES.UNAUTHORIZED, 
-                success: false, 
-                message: MESSAGES.AUTH.UNAUTHORIZED 
-            });
-        }
 
         const name = req.body.name;
         const phone = req.body.phone;
@@ -34,8 +24,8 @@ export const createCustomer = async (req, res) => {
             });
         }
 
-        // Check if exists and Update (Upsert) - Scoped to Tenant
-        let customer = await Customer.findOne({ where: { phone, phoneCountryCode, tenantId } });
+        // Check if exists and Update (Upsert)
+        let customer = await Customer.findOne({ where: { phone, phoneCountryCode } });
 
         if (customer) {
             // Update existing
@@ -59,8 +49,7 @@ export const createCustomer = async (req, res) => {
                 phoneCountryCode,
                 email,
                 address,
-                tenantId,
-                storeId // Optional: link to specific store if created by store
+                storeId
             });
             return sendResponse(res, { 
                 statusCode: STATUS_CODES.CREATED, 
@@ -84,19 +73,8 @@ export const createCustomer = async (req, res) => {
 // Search Customers
 export const searchCustomers = async (req, res) => {
     try {
-        const tenant = req.tenant;
-        const tenantId = tenant?.id;
         const query = req.query.query;
-
-        if (!tenantId) {
-             return sendResponse(res, { 
-                statusCode: STATUS_CODES.UNAUTHORIZED, 
-                success: false, 
-                message: MESSAGES.AUTH.UNAUTHORIZED 
-            });
-        }
-
-        let whereClause = { tenantId };
+        let whereClause = {};
 
         if (query) {
             whereClause[Op.or] = [
