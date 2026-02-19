@@ -57,7 +57,7 @@ export const Prescription = sequelize.define('Prescription', {
         allowNull: true
     },
     canvasData: {
-        type: DataTypes.TEXT('long'),
+        type: DataTypes.TEXT,
         allowNull: true,
         field: 'canvas_data'
     },

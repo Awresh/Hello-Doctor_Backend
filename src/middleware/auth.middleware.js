@@ -12,7 +12,11 @@ export const verifyToken = async (req, res, next) => {
         '/inventory/stores/login',
         '/base-route',
         '/sections',
-        '/auth/unified-login'
+        '/auth/unified-login',
+        '/auth/forgot-password',
+        '/auth/reset-password',
+        '/auth/send-otp',
+        '/auth/verify-otp'
     ];
     
     if (skipPaths.includes(req.path) || req.path.startsWith('/item') || req.path.startsWith('/section')) {

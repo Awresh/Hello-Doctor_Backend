@@ -29,6 +29,11 @@ export const Tenant = sequelize.define('Tenant', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  phoneCountryCode: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+    defaultValue: '+91'
+  },
   businessTypeId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -76,8 +81,38 @@ export const Tenant = sequelize.define('Tenant', {
     defaultValue: 0.00,
     field: 'wallet_balance',
     comment: 'Wallet token balance (1 Token = 1 Rs)'
-  }
-}, {
+  },
+  whatsappApiUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'whatsapp_api_url'
+  },
+  whatsappApiKey: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'whatsapp_api_key'
+  },
+  whatsappInstanceId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'whatsapp_instance_id'
+  },
+    whatsappEnabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'whatsapp_enabled'
+    },
+    resetPasswordToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'reset_password_token'
+    },
+    resetPasswordExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'reset_password_expires'
+    }
+  }, {
   tableName: 'tenants',
   timestamps: true,
   hooks: {

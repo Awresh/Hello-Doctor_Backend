@@ -100,6 +100,18 @@ export const PurchaseBill = sequelize.define('PurchaseBill', {
         bill.billNumber = `PB-${String(nextNumber).padStart(6, '0')}`;
         console.log('Generated new bill number:', bill.billNumber);
       }
+
+      // Update payment status based on amounts
+      const total = Number(bill.totalAmount) || 0;
+      const paid = Number(bill.paidAmount) || 0;
+
+      if (paid <= 0) {
+        bill.paymentStatus = 'Unpaid';
+      } else if (paid >= total) {
+        bill.paymentStatus = 'Paid';
+      } else {
+        bill.paymentStatus = 'Partial';
+      }
     }
   },
   indexes: [

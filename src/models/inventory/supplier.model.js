@@ -23,6 +23,11 @@ export const Supplier = sequelize.define('Supplier', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  contactNumberCountryCode: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+    defaultValue: '+91'
+  },
   email: {
     type: DataTypes.STRING,
     allowNull: true

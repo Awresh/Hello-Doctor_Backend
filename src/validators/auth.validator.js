@@ -19,4 +19,21 @@ export class AuthValidator {
             throw { statusCode: 400, message: 'Email is required' };
         }
     }
+
+    validateForgotPassword(data) {
+        const { email } = data;
+        if (!email) {
+            throw { statusCode: 400, message: 'Email is required' };
+        }
+    }
+
+    validateResetPassword(data) {
+        const { token, password } = data;
+        if (!token || !password) {
+            throw { statusCode: 400, message: 'Token and new password are required' };
+        }
+        if (password.length < 6) {
+            throw { statusCode: 400, message: 'Password must be at least 6 characters long' };
+        }
+    }
 }

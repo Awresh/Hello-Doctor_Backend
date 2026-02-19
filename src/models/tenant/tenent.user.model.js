@@ -92,6 +92,11 @@ export const TenantUser = sequelize.define('TenantUser', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    phoneCountryCode: {
+        type: DataTypes.STRING(10),
+        allowNull: true,
+        defaultValue: '+91'
+    },
     password: {
         type: DataTypes.STRING,
         allowNull: true // Optional for now
@@ -108,6 +113,16 @@ export const TenantUser = sequelize.define('TenantUser', {
             model: 'tenant_users',
             key: 'id'
         }
+    },
+    resetPasswordToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'reset_password_token'
+    },
+    resetPasswordExpires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'reset_password_expires'
     }
 }, {
     tableName: 'tenant_users',

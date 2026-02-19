@@ -6,6 +6,7 @@ import { MESSAGES } from "../../config/serverConfig.js";
 import { sendResponse } from "../../utils/response.util.js";
 import { STATUS_CODES } from "../../config/statusCodes.js";
 import { Op } from "sequelize";
+import { sendWhatsAppForService } from "../../utils/whatsapp.util.js";
 
 const PurchaseBillController = {
     // Create new purchase bill
@@ -217,11 +218,58 @@ const PurchaseBillController = {
                 distinct: true
             });
 
-            const response = rows.map((bill) => ({
-                ...bill.toJSON(),
-                showAction_Edit: true,
-                showAction_View: true,
-                showAction_Delete: true,
+            const response = await Promise.all(rows.map(async (bill) => {
+                let billData = bill.toJSON();
+                let paymentsChanged = false;
+                
+                if (billData.payments && Array.isArray(billData.payments)) {
+                    billData.payments = billData.payments.map((p, idx) => {
+                        let updated = { ...p };
+                        let changed = false;
+
+                        // Normalize ID
+                        if (!updated.paymentId && updated._id) {
+                            updated.paymentId = String(updated._id);
+                            changed = true;
+                        } else if (!updated.paymentId) {
+                            updated.paymentId = `PAY-LEGACY-${Date.now()}-${idx}`;
+                            changed = true;
+                        }
+
+                        // Normalize Method
+                        if (!updated.method && updated.paymentMethod) {
+                            updated.method = updated.paymentMethod;
+                            changed = true;
+                        }
+
+                        // Normalize Date
+                        if (!updated.date && updated.transactionDate) {
+                            updated.date = updated.transactionDate;
+                            changed = true;
+                        }
+
+                        if (changed) paymentsChanged = true;
+                        return updated;
+                    });
+                }
+
+                if (paymentsChanged) {
+                    console.log(`Injected ${billData.payments.length} payment IDs for bill ${billData.id}`);
+                    await PurchaseBill.update(
+                        { payments: billData.payments },
+                        { where: { id: billData.id } }
+                    );
+                }
+
+                // Final verification log
+                console.log(`Bill ${billData.id} payments:`, JSON.stringify(billData.payments.map(p => p.paymentId)));
+
+                return {
+                    ...billData,
+                    showAction_Edit: true,
+                    showAction_View: true,
+                    showAction_Delete: true,
+                };
             }));
 
             return sendResponse(res, {
@@ -268,6 +316,46 @@ const PurchaseBillController = {
 
             // Manually populate products because it's a JSONB field
             const billData = purchaseBill.toJSON();
+            
+            // Ensure all payments have paymentId (legacy fallback)
+            let paymentsChanged = false;
+            if (billData.payments && Array.isArray(billData.payments)) {
+                billData.payments = billData.payments.map((p, idx) => {
+                    let updated = { ...p };
+                    let changed = false;
+
+                    // Normalize ID
+                    if (!updated.paymentId && updated._id) {
+                        updated.paymentId = String(updated._id);
+                        changed = true;
+                    } else if (!updated.paymentId) {
+                        updated.paymentId = `PAY-LEGACY-${Date.now()}-${idx}`;
+                        changed = true;
+                    }
+
+                    // Normalize Method
+                    if (!updated.method && updated.paymentMethod) {
+                        updated.method = updated.paymentMethod;
+                        changed = true;
+                    }
+
+                    // Normalize Date
+                    if (!updated.date && updated.transactionDate) {
+                        updated.date = updated.transactionDate;
+                        changed = true;
+                    }
+
+                    if (changed) paymentsChanged = true;
+                    return updated;
+                });
+            }
+
+            if (paymentsChanged) {
+                purchaseBill.payments = billData.payments;
+                purchaseBill.changed('payments', true);
+                await purchaseBill.save();
+            }
+
             if (billData.products && billData.products.length > 0) {
                 const productIds = billData.products.map(p => p.product);
                 const products = await Product.findAll({
@@ -526,17 +614,19 @@ const PurchaseBillController = {
 
             const paymentAmount = Number(amount);
             const currentPaid = Number(purchaseBill.paidAmount) || 0;
-            // totalAmount calculation depends on products, assuming it's available or we calc it.
-            // Simplified here. 
 
             const payments = purchaseBill.payments || [];
             payments.push({
+                paymentId: `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                 amount: paymentAmount,
                 date: date || new Date(),
                 method: method || 'Cash',
                 reference,
                 notes,
-                recordedBy: tenantId
+                recordedBy: {
+                    id: tenantId,
+                    name: tenant?.name || 'System'
+                }
             });
 
             purchaseBill.payments = payments;
@@ -545,12 +635,153 @@ const PurchaseBillController = {
 
             await purchaseBill.save();
 
+            // ── WhatsApp notification to supplier (fire-and-forget) ──
+            try {
+                const supplier = await Supplier.findOne({ where: { id: purchaseBill.supplierId } });
+                if (supplier?.contactNumber) {
+                    const total = Number(purchaseBill.totalAmount) || 0;
+                    const paid  = Number(purchaseBill.paidAmount)  || 0;
+                    const due   = Math.max(0, total - paid);
+                    const fmt   = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` ;
+                    const dateStr = new Date(date || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                    const msg = [
+                        `🧾 *Payment Received*`,
+                        ``,
+                        `Dear *${supplier.name}*,`,
+                        `We have recorded a payment against your bill.`,
+                        ``,
+                        `📋 *Bill No:* ${purchaseBill.billNumber}`,
+                        `📅 *Date:* ${dateStr}`,
+                        `💳 *Method:* ${method || 'Cash'}`,
+                        reference ? `🔖 *Reference:* ${reference}` : null,
+                        ``,
+                        `💰 *Amount Paid:* ${fmt(paymentAmount)}`,
+                        `📊 *Total Bill:* ${fmt(total)}`,
+                        `✅ *Total Paid:* ${fmt(paid)}`,
+                        due > 0 ? `⏳ *Balance Due:* ${fmt(due)}` : `✅ *Status:* Fully Paid`,
+                        ``,
+                        `Thank you for your business! 🙏`,
+                    ].filter(l => l !== null).join('\n');
+
+                    sendWhatsAppForService('purchase', tenantId, supplier.contactNumber, msg, supplier.contactNumberCountryCode);
+                }
+            } catch (waErr) {
+                console.warn('[WhatsApp] Payment notification failed:', waErr.message);
+            }
+
             return sendResponse(res, {
                 message: "Payment recorded successfully",
                 data: purchaseBill,
             });
 
         } catch (error) {
+            console.error("Add Payment Error:", error);
+            return sendResponse(res, {
+                message: STATUS_CODES.INTERNAL_SERVER_ERROR,
+                success: false,
+            });
+        }
+    },
+
+    // Update payment
+    updatePayment: async (req, res) => {
+        try {
+            const { id, paymentId } = req.params;
+            const { amount, date, method, reference, notes } = req.body;
+            const tenant = req.tenant;
+            const tenantId = tenant?.id;
+
+            const purchaseBill = await PurchaseBill.findOne({ where: { id, tenantId } });
+
+            if (!purchaseBill) {
+                return sendResponse(res, {
+                    message: "Purchase bill not found",
+                    success: false,
+                });
+            }
+
+            let payments = purchaseBill.payments || [];
+            const paymentIndex = payments.findIndex(p => p.paymentId === paymentId);
+
+            if (paymentIndex === -1) {
+                return sendResponse(res, {
+                    message: "Payment record not found",
+                    success: false,
+                });
+            }
+
+            // Update payment details
+            if (amount !== undefined) payments[paymentIndex].amount = Number(amount);
+            if (date) payments[paymentIndex].date = date;
+            if (method) payments[paymentIndex].method = method;
+            if (reference !== undefined) payments[paymentIndex].reference = reference;
+            if (notes !== undefined) payments[paymentIndex].notes = notes;
+
+            purchaseBill.payments = payments;
+            purchaseBill.changed('payments', true);
+
+            // Recalculate total paid amount
+            purchaseBill.paidAmount = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+            await purchaseBill.save();
+
+            return sendResponse(res, {
+                message: "Payment updated successfully",
+                data: purchaseBill,
+            });
+
+        } catch (error) {
+            console.error("Update Payment Error:", error);
+            return sendResponse(res, {
+                message: STATUS_CODES.INTERNAL_SERVER_ERROR,
+                success: false,
+            });
+        }
+    },
+
+    // Delete payment
+    deletePayment: async (req, res) => {
+        try {
+            const { id, paymentId } = req.params;
+            const tenant = req.tenant;
+            const tenantId = tenant?.id;
+
+            const purchaseBill = await PurchaseBill.findOne({ where: { id, tenantId } });
+
+            if (!purchaseBill) {
+                return sendResponse(res, {
+                    message: "Purchase bill not found",
+                    success: false,
+                });
+            }
+
+            let payments = purchaseBill.payments || [];
+            const initialLength = payments.length;
+            payments = payments.filter(p => p.paymentId !== paymentId);
+
+            if (payments.length === initialLength) {
+                return sendResponse(res, {
+                    message: "Payment record not found",
+                    success: false,
+                });
+            }
+
+            purchaseBill.payments = payments;
+            purchaseBill.changed('payments', true);
+
+            // Recalculate total paid amount
+            purchaseBill.paidAmount = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+            await purchaseBill.save();
+
+            return sendResponse(res, {
+                message: "Payment deleted successfully",
+                data: purchaseBill,
+            });
+
+        } catch (error) {
+            console.error("Delete Payment Error:", error);
             return sendResponse(res, {
                 message: STATUS_CODES.INTERNAL_SERVER_ERROR,
                 success: false,

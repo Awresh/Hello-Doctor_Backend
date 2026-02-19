@@ -19,8 +19,16 @@ export class TenantService {
             throw { statusCode: 404, message: "Tenant not found" };
         }
 
-        const { name, businessName, businessTypeId } = data;
-        await this.tenantRepository.update(tenant, { name, businessName, businessTypeId });
+        const { name, businessName, businessTypeId, whatsappApiUrl, whatsappApiKey, whatsappInstanceId, whatsappEnabled } = data;
+        await this.tenantRepository.update(tenant, { 
+            name, 
+            businessName, 
+            businessTypeId, 
+            whatsappApiUrl, 
+            whatsappApiKey, 
+            whatsappInstanceId, 
+            whatsappEnabled 
+        });
 
         return await this.tenantRepository.findById(tenantId);
     }

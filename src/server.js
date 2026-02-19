@@ -22,11 +22,16 @@ import pharmacyServicesRouter from './routes/pharmacy/services.routes.js';
 import billingRouter from './routes/tenant/billing.routes.js';
 import planRouter from './routes/plan.routes.js';
 import prescriptionRouter from './routes/prescription.routes.js';
+import whatsappRouter from './routes/whatsapp.routes.js';
 import { verifyToken } from './middleware/auth.middleware.js';
 const app = express();
 
+// app.use(cors({
+//     origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5174'],
+//     credentials: true
+// }));
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'],
+    origin: '*',
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -73,6 +78,7 @@ app.use(uploadRouter);
 app.use(appointmentRouter);
 app.use(notificationRouter);
 app.use(prescriptionRouter);
+app.use(whatsappRouter);
 import callRouter from './routes/call.routes.js';
 app.use('/api/calls', callRouter);
 // app.use('/api', routes);

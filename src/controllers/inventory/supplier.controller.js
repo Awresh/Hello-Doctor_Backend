@@ -11,6 +11,7 @@ const SupplierController = {
         try {
             const name = req.body.name;
             const contactNumber = req.body.contactNumber;
+            const contactNumberCountryCode = req.body.contactNumberCountryCode;
             const email = req.body.email;
             const address = req.body.address;
             const tenant = req.tenant;
@@ -38,6 +39,7 @@ const SupplierController = {
                 storeId,
                 name,
                 contactNumber,
+                contactNumberCountryCode,
                 email,
                 address,
                 status: 'active'

@@ -48,8 +48,71 @@ export const checkEmail = async (req, res) => {
   }
 }
 
+// Forgot password
+export const forgotPassword = async (req, res) => {
+  try {
+    authValidator.validateForgotPassword(req.body);
+    await authService.forgotPassword(req.body.email);
+    return sendResponse(res, { statusCode: STATUS_CODES.OK, success: true, message: 'Password reset link sent successfully' });
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    const statusCode = error.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR;
+    const message = error.message || 'Failed to process forgot password request';
+    return sendResponse(res, { statusCode, success: false, message });
+  }
+}
+
+// Reset password
+export const resetPassword = async (req, res) => {
+  try {
+    authValidator.validateResetPassword(req.body);
+    await authService.resetPassword(req.body.token, req.body.password);
+    return sendResponse(res, { statusCode: STATUS_CODES.OK, success: true, message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Reset Password Error:', error);
+    const statusCode = error.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR;
+    const message = error.message || 'Failed to reset password';
+    return sendResponse(res, { statusCode, success: false, message });
+  }
+}
+
+// Send OTP
+export const sendOTP = async (req, res) => {
+  try {
+    authValidator.validateEmail(req.body);
+    await authService.sendOTP(req.body.email);
+    return sendResponse(res, { statusCode: STATUS_CODES.OK, success: true, message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Send OTP Error:', error);
+    const statusCode = error.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR;
+    const message = error.message || 'Failed to send OTP';
+    return sendResponse(res, { statusCode, success: false, message });
+  }
+}
+
+// Verify OTP
+export const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      throw { statusCode: 400, message: 'Email and OTP are required' };
+    }
+    await authService.verifyOTP(email, otp);
+    return sendResponse(res, { statusCode: STATUS_CODES.OK, success: true, message: 'OTP verified successfully' });
+  } catch (error) {
+    console.error('Verify OTP Error:', error);
+    const statusCode = error.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR;
+    const message = error.message || 'Invalid or expired OTP';
+    return sendResponse(res, { statusCode, success: false, message });
+  }
+}
+
 export default {
   login,
   register,
-  checkEmail
+  checkEmail,
+  forgotPassword,
+  resetPassword,
+  sendOTP,
+  verifyOTP
 }

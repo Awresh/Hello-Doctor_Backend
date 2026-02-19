@@ -4,12 +4,14 @@ import { TenantUser } from './tenant/tenent.user.model.js';
 import { DoctorDetails } from './tenant/doctor-details.model.js';
 import { DoctorService } from './tenant/doctor-service.model.js';
 import { User } from './users/user.model.js';
+import { OTP } from './auth/otp.model.js';
 
 import { Plan } from './business/plan.model.js';
 import { Subscription } from './tenant/subscription.model.js';
 import { PaymentMethod } from './tenant/payment-method.model.js';
 import { BillingHistory } from './tenant/billing-history.model.js';
 import { PaymentMode } from './tenant/payment-mode.model.js';
+import { WhatsAppSession } from './tenant/whatsapp-session.model.js';
 
 import { BusinessType } from './business/business-type.model.js';
 import { Product } from './inventory/product.model.js';
@@ -226,6 +228,10 @@ function setupAssociations() {
   TimeSettings.belongsTo(Tenant, { foreignKey: 'tenantId' });
   Tenant.hasMany(TimeSettings, { foreignKey: 'tenantId' });
 
+  // WhatsApp Session associations
+  WhatsAppSession.belongsTo(Tenant, { foreignKey: 'tenantId' });
+  Tenant.hasMany(WhatsAppSession, { foreignKey: 'tenantId' });
+
   // Special Holiday associations
   SpecialHoliday.belongsTo(Tenant, { foreignKey: 'tenantId' });
   Tenant.hasMany(SpecialHoliday, { foreignKey: 'tenantId' });
@@ -249,6 +255,7 @@ export {
   DoctorDetails,
   DoctorService,
   User,
+  OTP,
   Admin,
   BusinessType,
   Product,
@@ -279,6 +286,7 @@ export {
   PaymentMode,
   TimeSettings,
   SpecialHoliday,
+  WhatsAppSession,
   Prescription,
   CallHistory,
   CallBillingHistory,

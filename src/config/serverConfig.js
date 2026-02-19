@@ -62,6 +62,8 @@ export const API_ROUTES = {
   REGISTER: '/auth/register',
   LOGOUT: '/auth/logout',
   REFRESH_TOKEN: '/auth/refresh',
+  FORGOT_PASSWORD: '/auth/forgot-password',
+  RESET_PASSWORD: '/auth/reset-password',
 
   // Admin Authentication
   ADMIN_LOGIN: '/admin/login',

@@ -22,6 +22,7 @@ export const createCustomer = async (req, res) => {
 
         const name = req.body.name;
         const phone = req.body.phone;
+        const phoneCountryCode = req.body.phoneCountryCode;
         const email = req.body.email;
         const address = req.body.address;
 
@@ -34,14 +35,15 @@ export const createCustomer = async (req, res) => {
         }
 
         // Check if exists and Update (Upsert) - Scoped to Tenant
-        let customer = await Customer.findOne({ where: { phone, tenantId } });
+        let customer = await Customer.findOne({ where: { phone, phoneCountryCode, tenantId } });
 
         if (customer) {
             // Update existing
             await customer.update({
                 name,
                 email: email || customer.email,
-                address: address || customer.address
+                address: address || customer.address,
+                phoneCountryCode: phoneCountryCode || customer.phoneCountryCode
             });
             return sendResponse(res, { 
                 statusCode: STATUS_CODES.OK, 
@@ -54,6 +56,7 @@ export const createCustomer = async (req, res) => {
             customer = await Customer.create({
                 name,
                 phone,
+                phoneCountryCode,
                 email,
                 address,
                 tenantId,

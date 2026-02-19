@@ -27,7 +27,7 @@ export const createTenantUser = async (req, res) => {
             });
         }
 
-        const { name, role, email, phone, password, permissions, about, description, experience, speciality, doctorId, doctorDetails } = req.body;
+        const { name, role, email, phone, phoneCountryCode, password, permissions, about, description, experience, speciality, doctorId, doctorDetails } = req.body;
 
         // Log the payload for debugging if needed
         // console.log("Creating TenantUser Payload:", { name, role, email, phone, hasPassword: !!password, permissionsCount: permissions?.length });
@@ -76,6 +76,7 @@ export const createTenantUser = async (req, res) => {
             role,
             email,
             phone,
+            phoneCountryCode,
             password, // Password hashing is handled by BeforeSave hook in model
             permissions: permissions || [], // Default to empty array if not provided
             about,
@@ -247,7 +248,7 @@ export const updateTenantUser = async (req, res) => {
         }
 
         const { id } = req.params;
-        const { name, role, email, phone, password, permissions, about, description, experience, speciality, doctorId, doctorDetails } = req.body;
+        const { name, role, email, phone, phoneCountryCode, password, permissions, about, description, experience, speciality, doctorId, doctorDetails } = req.body;
 
         const user = await TenantUser.findOne({
             where: { id, tenantId },
@@ -272,7 +273,8 @@ export const updateTenantUser = async (req, res) => {
             description,
             experience,
             speciality,
-            doctorId
+            doctorId,
+            phoneCountryCode
         };
 
         // Only update password if provided and not empty
@@ -390,7 +392,7 @@ export const updateProfile = async (req, res) => {
         // Scenario 1: Tenant User (Doctor, Staff, etc.)
         if (req.user && req.user.id) {
             const userId = req.user.id;
-            const { name, businessName, oldPassword, newPassword, phone, profilePic } = req.body;
+            const { name, businessName, oldPassword, newPassword, phone, phoneCountryCode, profilePic } = req.body;
 
             const user = await TenantUser.scope('withPassword').findOne({
                 where: { id: userId, tenantId }
@@ -407,6 +409,7 @@ export const updateProfile = async (req, res) => {
             const updateData = {};
             if (name) updateData.name = name;
             if (phone) updateData.phone = phone;
+            if (phoneCountryCode) updateData.phoneCountryCode = phoneCountryCode;
             // Explicitly allow setting profilePic to null (for delete) or new string
             if (profilePic !== undefined) updateData.profilePic = profilePic;
 
@@ -453,7 +456,7 @@ export const updateProfile = async (req, res) => {
 
         // Scenario 2: Tenant Owner (Direct Tenant Login)
         else if (req.tenant && req.tenant.id) {
-            const { name, businessName, oldPassword, newPassword, phone, profilePic } = req.body;
+            const { name, businessName, oldPassword, newPassword, phone, phoneCountryCode, profilePic } = req.body;
 
             // Re-fetch tenant with password
             const tenant = await Tenant.scope('withPassword').findByPk(tenantId);
@@ -470,6 +473,7 @@ export const updateProfile = async (req, res) => {
             if (name) updateData.name = name;
             if (businessName) updateData.businessName = businessName;
             if (phone) updateData.phone = phone;
+            if (phoneCountryCode) updateData.phoneCountryCode = phoneCountryCode;
             if (profilePic !== undefined) updateData.profilePic = profilePic;
 
             if (newPassword && newPassword.trim() !== '') {

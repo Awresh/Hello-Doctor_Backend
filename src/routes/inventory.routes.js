@@ -89,6 +89,8 @@ router.post(API_ROUTES.PURCHASE_BILLS, PurchaseBillController.createPurchaseBill
 router.patch(API_ROUTES.PURCHASE_BILL_BY_ID, PurchaseBillController.updatePurchaseBill);
 router.delete(API_ROUTES.PURCHASE_BILL_BY_ID, PurchaseBillController.deletePurchaseBill);
 router.post(`${API_ROUTES.PURCHASE_BILL_BY_ID}/payments`, PurchaseBillController.addPayment);
+router.patch(`${API_ROUTES.PURCHASE_BILL_BY_ID}/payments/:paymentId`, PurchaseBillController.updatePayment);
+router.delete(`${API_ROUTES.PURCHASE_BILL_BY_ID}/payments/:paymentId`, PurchaseBillController.deletePayment);
 router.get(API_ROUTES.SUPPLIER_PRODUCTS, PurchaseBillController.getProductsBySupplier);
 router.get(API_ROUTES.PRODUCT_PRICE_HISTORY, PurchaseBillController.getPriceHistory);
 

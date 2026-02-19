@@ -15,6 +15,11 @@ export const Customer = sequelize.define('Customer', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  phoneCountryCode: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+    defaultValue: '+91'
+  },
   email: {
     type: DataTypes.STRING,
     allowNull: true

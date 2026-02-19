@@ -44,6 +44,7 @@ export const Admin = sequelize.define('Admin', {
 }, {
     tableName: 'admins',
     timestamps: true,
+    underscored: true,
     hooks: {
         beforeSave: async (admin) => {
             if (admin.changed('password')) {
