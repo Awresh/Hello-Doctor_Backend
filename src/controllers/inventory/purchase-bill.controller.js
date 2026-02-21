@@ -14,7 +14,7 @@ const PurchaseBillController = {
         try {
             console.log('=== CREATE PURCHASE BILL START ===');
 
-            const { supplier, products, purchaseDate, notes, billImages, billNumber } = req.body;
+            const { supplier, supplierName, products, purchaseDate, notes, billImages, billNumber } = req.body;
             const tenant = req.tenant;
             const tenantId = tenant?.id;
             const storeData = req.store;
@@ -27,6 +27,41 @@ const PurchaseBillController = {
                 });
             }
 
+            // Handle supplier - match by name or create new
+            let supplierId = supplier;
+            
+            if (!supplierId && supplierName) {
+                // Try to find supplier by name (case-insensitive)
+                const existingSupplier = await Supplier.findOne({
+                    where: {
+                        tenantId,
+                        name: { [Op.iLike]: supplierName.trim() }
+                    }
+                });
+
+                if (existingSupplier) {
+                    supplierId = existingSupplier.id;
+                    console.log(`Found existing supplier: ${existingSupplier.name} (ID: ${supplierId})`);
+                } else {
+                    // Create new supplier
+                    const newSupplier = await Supplier.create({
+                        tenantId,
+                        storeId,
+                        name: supplierName.trim(),
+                        status: 'active'
+                    });
+                    supplierId = newSupplier.id;
+                    console.log(`Created new supplier: ${newSupplier.name} (ID: ${supplierId})`);
+                }
+            }
+
+            if (!supplierId) {
+                return sendResponse(res, {
+                    message: "Supplier is required",
+                    success: false,
+                });
+            }
+
             // Validate products array
             if (!Array.isArray(products) || products.length === 0) {
                 return sendResponse(res, {
@@ -35,8 +70,65 @@ const PurchaseBillController = {
                 });
             }
 
+            // Process products - create if not exist, match by name
+            const processedProducts = [];
+            for (const item of products) {
+                let productId = item.product;
+                let productName = item.productName || 'Unknown Product';
+                
+                // If product ID not provided but productName exists (from OCR)
+                if (!productId && productName) {
+                    // Try to find product by name (case-insensitive)
+                    const existingProduct = await Product.findOne({
+                        where: {
+                            tenantId,
+                            name: { [Op.iLike]: productName.trim() }
+                        }
+                    });
+
+                    if (existingProduct) {
+                        productId = existingProduct.id;
+                        console.log(`Found existing product: ${existingProduct.name} (ID: ${productId})`);
+                    } else {
+                        // Create new product
+                        const newProduct = await Product.create({
+                            tenantId,
+                            storeId,
+                            supplierId: supplierId,
+                            name: productName.trim(),
+                            buyPrice: item.buyPrice || 0,
+                            sellingPrice: item.sellingPrice || item.buyPrice || 0,
+                            globalStock: 0,
+                            stockStatus: 'Out of Stock',
+                            isActive: true,
+                            status: 'Active',
+                            type: 'Product',
+                            categoryId: null,
+                            brandId: null,
+                            unitId: null
+                        });
+                        productId = newProduct.id;
+                        console.log(`Created new product: ${newProduct.name} (ID: ${productId})`);
+                    }
+                }
+
+                if (!productId) {
+                    return sendResponse(res, {
+                        message: `Product ID is required for: ${productName}`,
+                        success: false,
+                    });
+                }
+
+                processedProducts.push({
+                    product: productId,
+                    quantity: item.quantity || 1,
+                    buyPrice: item.buyPrice || 0,
+                    sellingPrice: item.sellingPrice || item.buyPrice || 0
+                });
+            }
+
             // Calculate total amount
-            const totalAmount = products.reduce((sum, item) => {
+            const totalAmount = processedProducts.reduce((sum, item) => {
                 return sum + (Number(item.buyPrice) * Number(item.quantity));
             }, 0);
 
@@ -44,8 +136,8 @@ const PurchaseBillController = {
             const purchaseBill = await PurchaseBill.create({
                 tenantId,
                 storeId,
-                supplierId: supplier,
-                products, // JSON field
+                supplierId: supplierId,
+                products: processedProducts, // JSON field
                 totalAmount,
                 purchaseDate: purchaseDate || new Date(),
                 notes,
@@ -55,9 +147,7 @@ const PurchaseBillController = {
             });
 
             // Update product stocks and prices
-            // Update product stocks and prices
-            // Fetch all products involved in one query to avoid N+1
-            const productIds = products.map(item => item.product); // Assuming item.product is the ID
+            const productIds = processedProducts.map(item => item.product);
             const dbProducts = await Product.findAll({
                 where: {
                     id: productIds
@@ -67,8 +157,8 @@ const PurchaseBillController = {
             // Create a map for easy lookup
             const productMap = new Map(dbProducts.map(p => [p.id, p]));
 
-            for (const item of products) {
-                const product = productMap.get(parseInt(item.product)); // Ensure ID comparison works
+            for (const item of processedProducts) {
+                const product = productMap.get(parseInt(item.product));
 
                 if (product) {
                     // Track price changes
@@ -153,13 +243,15 @@ const PurchaseBillController = {
             console.error("Create Purchase Bill Error:", error);
             // Handle Sequelize validation errors
             if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
-                return sendResponse(res, {
-                    message: "Validation Error: " + error.errors.map(e => e.message).join(', '),
+                return res.status(400).json({
+                    statusCode: 400,
+                    message: error.errors.map(e => e.message).join(', '),
                     success: false,
                     data: error.errors
                 });
             }
-            return sendResponse(res, {
+            return res.status(500).json({
+                statusCode: 500,
                 message: error.message || STATUS_CODES.INTERNAL_SERVER_ERROR,
                 success: false,
                 data: error.errors || null
