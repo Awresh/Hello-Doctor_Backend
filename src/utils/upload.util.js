@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const uploadDir = 'uploads';
+const uploadDir = path.resolve('uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -15,9 +15,10 @@ const storage = multer.diskStorage({
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const sanitizedName = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
         const filename = uniqueSuffix + '-' + sanitizedName;
-        const fullPath = path.normalize(path.join(uploadDir, filename));
         
-        if (!fullPath.startsWith(path.resolve(uploadDir))) {
+        const fullPath = path.resolve(path.join(uploadDir, filename));
+        
+        if (!fullPath.startsWith(uploadDir)) {
             return cb(new Error('Invalid file path'), false);
         }
         

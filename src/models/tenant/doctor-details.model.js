@@ -48,6 +48,12 @@ export const DoctorDetails = sequelize.define('DoctorDetails', {
     specialization: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    preferredTemplateId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'general',
+        field: 'preferred_template_id'
     }
 }, {
     tableName: 'doctor_details',

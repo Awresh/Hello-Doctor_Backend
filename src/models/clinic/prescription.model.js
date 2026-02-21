@@ -65,6 +65,18 @@ export const Prescription = sequelize.define('Prescription', {
         type: DataTypes.DATEONLY,
         allowNull: false,
         defaultValue: DataTypes.NOW
+    },
+    templateId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'general',
+        field: 'template_id'
+    },
+    specializedData: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        field: 'specialized_data',
+        defaultValue: {}
     }
 }, {
     tableName: 'prescriptions',
